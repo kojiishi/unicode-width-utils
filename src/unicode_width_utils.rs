@@ -21,9 +21,11 @@ static IS_CJK: LazyLock<AtomicBool> = LazyLock::new(|| {
 /// The default CJK mode is initialized at startup
 /// based on the `UNICODE_WIDTH` environment variable,
 /// but can also be dynamically modified using [`UnicodeWidth::set_default_cjk`].
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Debug)]
 pub struct UnicodeWidth {
     is_cjk: bool,
+    should_expand_tab: bool,
+    tab_size: u8,
 }
 
 impl Default for UnicodeWidth {
@@ -35,6 +37,8 @@ impl Default for UnicodeWidth {
     fn default() -> Self {
         Self {
             is_cjk: IS_CJK.load(Ordering::Relaxed),
+            tab_size: 0,
+            should_expand_tab: false,
         }
     }
 }
@@ -73,7 +77,10 @@ impl UnicodeWidth {
     /// assert_eq!(cjk.char('█'), Some(2));
     /// ```
     pub fn with_cjk(is_cjk: bool) -> Self {
-        Self { is_cjk }
+        Self {
+            is_cjk,
+            ..Default::default()
+        }
     }
 
     /// Set the default CJK configuration dynamically.
@@ -147,10 +154,59 @@ impl UnicodeWidth {
         }
     }
 
+    /// Set the tab size for [`truncate`].
+    /// Initially `0`.
+    ///
+    /// See also [`set_expand_tab`].
+    ///
+    /// [`set_expand_tab`]: UnicodeWidth::set_expand_tab
+    /// [`truncate`]: UnicodeWidth::truncate
+    ///
+    /// # Examples
+    /// ```
+    /// use std::borrow::Cow;
+    /// use unicode_width_utils::UnicodeWidth;
+    ///
+    /// let mut uw = UnicodeWidth::new();
+    /// uw.set_tab_size(4);
+    /// assert_eq!(uw.truncate("A\tB", 3), Cow::Borrowed("A"));
+    /// assert_eq!(uw.truncate("A\tB", 4), Cow::Borrowed("A\t"));
+    /// assert_eq!(uw.truncate("A\tB", 5), Cow::Borrowed("A\tB"));
+    /// ```
+    pub fn set_tab_size(&mut self, tab_size: u8) {
+        self.tab_size = tab_size;
+    }
+
+    /// Set whether tabs should be expanded to spaces in [`truncate`].
+    /// Initially `false`.
+    ///
+    /// [`truncate`]: UnicodeWidth::truncate
+    ///
+    /// # Examples
+    /// ```
+    /// use std::borrow::Cow;
+    /// use unicode_width_utils::UnicodeWidth;
+    ///
+    /// let mut uw = UnicodeWidth::new();
+    /// uw.set_tab_size(4);
+    /// uw.set_expand_tab(true);
+    /// assert_eq!(uw.truncate("A\tB", 3), Cow::Borrowed("A"));
+    /// assert_eq!(uw.truncate("A\tB", 4), Cow::Owned::<str>("A   ".into()));
+    /// assert_eq!(uw.truncate("A\tB", 5), Cow::Owned::<str>("A   B".into()));
+    /// ```
+    pub fn set_expand_tab(&mut self, should_expand_tab: bool) {
+        self.should_expand_tab = should_expand_tab;
+    }
+
     /// Truncate a string slice to a maximum column width.
     ///
     /// The returned slice will be the longest prefix of `str`
     /// whose total column width does not exceed `max_width`.
+    ///
+    /// See also [`set_tab_size`] and [`set_expand_tab`].
+    ///
+    /// [`set_tab_size`]: UnicodeWidth::set_tab_size
+    /// [`set_expand_tab`]: UnicodeWidth::set_expand_tab
     ///
     /// # Examples
     /// ```
@@ -164,16 +220,45 @@ impl UnicodeWidth {
     /// assert_eq!(cjk.truncate("あああ", 3), "あ");
     /// assert_eq!(cjk.truncate("A█B", 2), "A");
     /// ```
-    pub fn truncate<'a>(&self, str: &'a str, max_width: usize) -> Cow<'a, str> {
+    pub fn truncate<'a>(&self, input: &'a str, max_width: usize) -> Cow<'a, str> {
         let mut width = 0;
-        for (i, ch) in str.char_indices() {
-            let ch_width = self.char(ch).unwrap_or(0);
+        let mut buffer: Option<String> = None;
+        let tab_size = self.tab_size as usize;
+        for (index, ch) in input.char_indices() {
+            let ch_width = if let Some(ch_width) = self.char(ch) {
+                ch_width
+            } else if ch == '\t' && tab_size > 0 {
+                if buffer.is_none() && self.should_expand_tab {
+                    let mut output = String::with_capacity(input.len() + tab_size * 4);
+                    output.push_str(&input[..index]);
+                    buffer = Some(output);
+                }
+                tab_size - (width % tab_size)
+            } else {
+                0
+            };
             width += ch_width;
             if width > max_width {
-                return Cow::Borrowed(&str[..i]);
+                return match buffer {
+                    None => Cow::Borrowed(&input[..index]),
+                    Some(output) => Cow::Owned(output),
+                };
+            }
+
+            if let Some(ref mut output) = buffer {
+                if ch == '\t' {
+                    for _ in 0..ch_width {
+                        output.push(' ');
+                    }
+                } else {
+                    output.push(ch);
+                }
             }
         }
-        Cow::Borrowed(str)
+        match buffer {
+            None => Cow::Borrowed(input),
+            Some(output) => Cow::Owned(output),
+        }
     }
 }
 
@@ -244,5 +329,25 @@ mod tests {
         assert_eq!(UnicodeWidth::new().char('\u{2588}'), Some(2));
 
         UnicodeWidth::set_default_cjk(original);
+    }
+
+    // If `tab_size` = 0, tab behaves as 0-width control character.
+    #[test]
+    fn truncate_tabs_zero() {
+        let mut uw = UnicodeWidth::new();
+        for _ in 0..2 {
+            assert_eq!(uw.truncate("A\tB", 1), Cow::Borrowed("A\t"));
+            assert_eq!(uw.truncate("A\tB", 2), Cow::Borrowed("A\tB"));
+            uw.set_expand_tab(true);
+        }
+    }
+
+    #[test]
+    fn truncate_tabs_expand_multi() {
+        let mut uw = UnicodeWidth::new();
+        uw.set_tab_size(4);
+        uw.set_expand_tab(true);
+        assert_eq!(uw.truncate("\t\t", 7), Cow::Owned::<str>("    ".into()));
+        assert_eq!(uw.truncate("\t\t", 8), Cow::Owned::<str>("        ".into()));
     }
 }
