@@ -10,12 +10,27 @@ static IS_CJK: LazyLock<AtomicBool> = LazyLock::new(|| {
     AtomicBool::new(is_cjk)
 });
 
+/// A configuration helper to measure character and string widths.
+///
+/// It determines the width of Unicode characters and strings,
+/// optionally treating East Asian Ambiguous characters
+/// (such as certain Greek, Cyrillic, and CJK characters)
+/// as having a width of 2 (CJK mode).
+///
+/// The default CJK mode is initialized at startup
+/// based on the `UNICODE_WIDTH` environment variable,
+/// but can also be dynamically modified using [`UnicodeWidth::set_default_cjk`].
 #[derive(Clone, Copy, Debug)]
 pub struct UnicodeWidth {
     is_cjk: bool,
 }
 
 impl Default for UnicodeWidth {
+    /// Create a `UnicodeWidth` configuration using the default CJK mode.
+    ///
+    /// The default mode is determined by the global setting,
+    /// which defaults to the value of the `UNICODE_WIDTH` environment variable
+    /// (value `"cjk"` enabling CJK mode).
     fn default() -> Self {
         Self {
             is_cjk: IS_CJK.load(Ordering::Relaxed),
@@ -24,18 +39,81 @@ impl Default for UnicodeWidth {
 }
 
 impl UnicodeWidth {
+    /// Create a new `UnicodeWidth` instance using the default CJK configuration.
+    ///
+    /// # Examples
+    /// ```
+    /// use unicode_width_utils::UnicodeWidth;
+    ///
+    /// let uw = UnicodeWidth::new();
+    /// ```
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// Create a new `UnicodeWidth` instance with a specific CJK flag.
+    ///
+    /// If `is_cjk` is true,
+    /// East Asian Ambiguous characters will be treated as 2 columns wide.
+    /// If false, they will be treated as 1 column wide.
+    ///
+    /// # Examples
+    /// ```
+    /// use unicode_width_utils::UnicodeWidth;
+    ///
+    /// let non_cjk = UnicodeWidth::with_cjk(false);
+    /// assert_eq!(non_cjk.char('█'), Some(1));
+    ///
+    /// let cjk = UnicodeWidth::with_cjk(true);
+    /// assert_eq!(cjk.char('█'), Some(2));
+    /// ```
     pub fn with_cjk(is_cjk: bool) -> Self {
         Self { is_cjk }
     }
 
+    /// Set the default CJK configuration dynamically.
+    ///
+    /// Future instances
+    /// created using [`UnicodeWidth::new`] or [`UnicodeWidth::default`]
+    /// will inherit this default value
+    /// unless explicitly overridden with [`UnicodeWidth::with_cjk`].
+    ///
+    /// # Examples
+    /// ```
+    /// use unicode_width_utils::UnicodeWidth;
+    ///
+    /// // Set default CJK mode to true
+    /// UnicodeWidth::set_default_cjk(true);
+    /// let uw = UnicodeWidth::new();
+    /// assert_eq!(uw.char('█'), Some(2));
+    ///
+    /// // Set default CJK mode to false
+    /// UnicodeWidth::set_default_cjk(false);
+    /// let uw2 = UnicodeWidth::new();
+    /// assert_eq!(uw2.char('█'), Some(1));
+    /// ```
     pub fn set_default_cjk(is_cjk: bool) {
         IS_CJK.store(is_cjk, Ordering::Relaxed);
     }
 
+    /// Return the column width of a character.
+    ///
+    /// Return `None` for control characters
+    /// or other characters without a defined width.
+    ///
+    /// This is a wrapper of [`UnicodeWidthChar`],
+    /// calls `width` or `width_cjk` depending on the configuration.
+    ///
+    /// [`UnicodeWidthChar`]: https://docs.rs/unicode-width/latest/unicode_width/trait.UnicodeWidthChar.html
+    ///
+    /// # Examples
+    /// ```
+    /// use unicode_width_utils::UnicodeWidth;
+    ///
+    /// let uw = UnicodeWidth::with_cjk(false);
+    /// assert_eq!(uw.char('A'), Some(1));
+    /// assert_eq!(uw.char('\n'), None);
+    /// ```
     pub fn char(&self, ch: char) -> Option<usize> {
         match self.is_cjk {
             false => UnicodeWidthChar::width(ch),
@@ -43,6 +121,20 @@ impl UnicodeWidth {
         }
     }
 
+    /// Return the total column width of a string.
+    ///
+    /// This is a wrapper of [`UnicodeWidthStr`],
+    /// calls `width` or `width_cjk` depending on the configuration.
+    ///
+    /// [`UnicodeWidthStr`]: https://docs.rs/unicode-width/latest/unicode_width/trait.UnicodeWidthStr.html
+    ///
+    /// # Examples
+    /// ```
+    /// use unicode_width_utils::UnicodeWidth;
+    ///
+    /// let uw = UnicodeWidth::with_cjk(false);
+    /// assert_eq!(uw.str("Hello"), 5);
+    /// ```
     pub fn str(&self, str: &str) -> usize {
         match self.is_cjk {
             false => UnicodeWidthStr::width(str),
@@ -50,6 +142,23 @@ impl UnicodeWidth {
         }
     }
 
+    /// Truncate a string slice to a maximum column width.
+    ///
+    /// The returned slice will be the longest prefix of `str`
+    /// whose total column width does not exceed `max_width`.
+    ///
+    /// # Examples
+    /// ```
+    /// use unicode_width_utils::UnicodeWidth;
+    ///
+    /// let uw = UnicodeWidth::with_cjk(false);
+    /// assert_eq!(uw.truncate("hello", 3), "hel");
+    ///
+    /// // Truncating CJK text (each 'あ' is 2 columns wide)
+    /// let cjk = UnicodeWidth::with_cjk(true);
+    /// assert_eq!(cjk.truncate("あああ", 3), "あ");
+    /// assert_eq!(cjk.truncate("A█B", 2), "A");
+    /// ```
     pub fn truncate<'a>(&self, str: &'a str, max_width: usize) -> &'a str {
         let mut width = 0;
         for (i, ch) in str.char_indices() {
