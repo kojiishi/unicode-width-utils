@@ -26,14 +26,6 @@ safe string truncation.
   breaking UTF-8 characters.
 
 ## Installation
-
-Add this to your `Cargo.toml`:
-```toml
-[dependencies]
-unicode-width-utils = "0.1.1"
-```
-
-Or run:
 ```bash
 cargo add unicode-width-utils
 ```

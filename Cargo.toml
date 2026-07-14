@@ -1,6 +1,6 @@
 [package]
 name = "unicode-width-utils"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2024"
 description = "A thin-wrapper for the `unicode-width` crate with additional functionalities"
 authors = ["Koji Ishii <kojiishi@gmail.com>"]

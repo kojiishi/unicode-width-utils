@@ -26,9 +26,9 @@ pub struct UnicodeWidth {
 }
 
 impl Default for UnicodeWidth {
-    /// Create a `UnicodeWidth` configuration using the default CJK mode.
+    /// Create a `UnicodeWidth` instance using the default CJK mode.
     ///
-    /// The default mode is determined by the global setting,
+    /// The default CJK mode is determined by the global setting,
     /// which defaults to the value of the `UNICODE_WIDTH` environment variable
     /// (value `"cjk"` enabling CJK mode).
     fn default() -> Self {
@@ -39,7 +39,11 @@ impl Default for UnicodeWidth {
 }
 
 impl UnicodeWidth {
-    /// Create a new `UnicodeWidth` instance using the default CJK configuration.
+    /// Create a `UnicodeWidth` instance using the default CJK mode.
+    ///
+    /// The default CJK mode is determined by the global setting,
+    /// which defaults to the value of the `UNICODE_WIDTH` environment variable
+    /// (value `"cjk"` enabling CJK mode).
     ///
     /// # Examples
     /// ```
