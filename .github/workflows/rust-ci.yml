@@ -1,0 +1,49 @@
+name: Rust CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Output rust version for educational purposes
+        run: rustup --version
+
+      - uses: actions/checkout@v7
+
+      # https://taskfile.dev/docs/installation
+      - name: Install Task
+        uses: go-task/setup-task@v2
+
+      - name: Build
+        run: cargo build
+
+      - name: Run tests
+        run: task tests
+
+      - name: Check doc
+        run: task doc
+        if: contains(matrix.os, 'ubuntu')
+
+      - name: Check clippy
+        run: task lints
+        if: contains(matrix.os, 'ubuntu')
+
+      - name: Check style
+        run: task fmtchk
+        if: contains(matrix.os, 'ubuntu')
