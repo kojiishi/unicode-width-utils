@@ -22,8 +22,9 @@ safe string truncation.
 - **Environment Variable Override**: Initialize the default CJK mode using
   `UNICODE_WIDTH=cjk`.
 - **Thread-safe Global Default**: Change the global CJK default at runtime.
-- **Safe Truncation**: Truncate strings to a specific column width without
-  breaking UTF-8 characters.
+- **Safe Truncation**: Truncate strings to a specific column width
+  without breaking UTF-8 characters,
+  including optional tab support.
 
 ## Installation
 ```bash
@@ -39,8 +40,6 @@ use unicode_width_utils::UnicodeWidth;
 
 fn main() {
     let uw = UnicodeWidth::new();
-    
-    // Non-CJK characters
     assert_eq!(uw.char('A'), Some(1));
     assert_eq!(uw.str("Hello"), 5);
 }
