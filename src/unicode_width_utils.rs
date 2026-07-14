@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::sync::LazyLock;
 use std::sync::atomic::{AtomicBool, Ordering};
 use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
@@ -163,16 +164,16 @@ impl UnicodeWidth {
     /// assert_eq!(cjk.truncate("あああ", 3), "あ");
     /// assert_eq!(cjk.truncate("A█B", 2), "A");
     /// ```
-    pub fn truncate<'a>(&self, str: &'a str, max_width: usize) -> &'a str {
+    pub fn truncate<'a>(&self, str: &'a str, max_width: usize) -> Cow<'a, str> {
         let mut width = 0;
         for (i, ch) in str.char_indices() {
             let ch_width = self.char(ch).unwrap_or(0);
             width += ch_width;
             if width > max_width {
-                return &str[..i];
+                return Cow::Borrowed(&str[..i]);
             }
         }
-        str
+        Cow::Borrowed(str)
     }
 }
 
