@@ -40,7 +40,7 @@ use unicode_width_utils::UnicodeWidth;
 
 fn main() {
     let uw = UnicodeWidth::new();
-    assert_eq!(uw.char('A'), Some(1));
+    assert_eq!(uw.char('A'), 1);
     assert_eq!(uw.str("Hello"), 5);
 }
 ```
@@ -55,11 +55,11 @@ use unicode_width_utils::UnicodeWidth;
 fn main() {
     // Treat ambiguous characters as 1 column wide
     let non_cjk = UnicodeWidth::with_cjk(false);
-    assert_eq!(non_cjk.char('█'), Some(1));
+    assert_eq!(non_cjk.char('█'), 1);
 
     // Treat ambiguous characters as 2 columns wide (CJK mode)
     let cjk = UnicodeWidth::with_cjk(true);
-    assert_eq!(cjk.char('█'), Some(2));
+    assert_eq!(cjk.char('█'), 2);
 }
 ```
 
@@ -75,7 +75,7 @@ fn main() {
     UnicodeWidth::set_default_cjk(true);
     
     let uw = UnicodeWidth::new();
-    assert_eq!(uw.char('█'), Some(2));
+    assert_eq!(uw.char('█'), 2);
 }
 ```
 

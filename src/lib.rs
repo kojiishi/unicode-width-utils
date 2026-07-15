@@ -13,15 +13,15 @@
 //!
 //! // Create an instance with the default CJK setting.
 //! let uw = UnicodeWidth::new();
-//! assert_eq!(uw.char('A'), Some(1));
+//! assert_eq!(uw.char('A'), 1);
 //!
 //! // Explicitly specify CJK behavior.
 //! let non_cjk = UnicodeWidth::with_cjk(false);
 //! let cjk = UnicodeWidth::with_cjk(true);
 //!
 //! // Ambiguous CJK characters (like '█') have width 1 or 2.
-//! assert_eq!(non_cjk.char('█'), Some(1));
-//! assert_eq!(cjk.char('█'), Some(2));
+//! assert_eq!(non_cjk.char('█'), 1);
+//! assert_eq!(cjk.char('█'), 2);
 //!
 //! // Truncate a string to a maximum width of columns.
 //! let truncated = cjk.truncate("A█B", 2);
