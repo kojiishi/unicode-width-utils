@@ -6,7 +6,7 @@ pub(crate) struct WidthIterator<'a, 'b> {
     uw: &'a UnicodeWidth,
     input_str: &'b str,
     input_chars: CharIndices<'b>,
-    position: usize,
+    width: usize,
     max_width: usize,
     input_end_index: Option<usize>,
     output: Option<String>,
@@ -28,7 +28,7 @@ impl<'a, 'b> WidthIterator<'a, 'b> {
             uw,
             input_str: input,
             input_chars: input.char_indices(),
-            position: 0,
+            width: 0,
             max_width: usize::MAX,
             input_end_index: None,
             output: None,
@@ -36,7 +36,7 @@ impl<'a, 'b> WidthIterator<'a, 'b> {
     }
 
     pub(crate) fn width(&self) -> usize {
-        self.position
+        self.width
     }
 
     #[inline]
@@ -66,16 +66,16 @@ impl<'a, 'b> Iterator for WidthIterator<'a, 'b> {
                 output.push_str(&self.input_str[..index]);
                 self.output = Some(output);
             }
-            tab_size - (self.position % tab_size)
+            tab_size - (self.width % tab_size)
         } else {
             1
         };
-        let new_position = self.position + ch_width;
-        if new_position > self.max_width {
+        let new_width = self.width + ch_width;
+        if new_width > self.max_width {
             self.input_end_index = Some(index);
             return None;
         }
-        self.position = new_position;
+        self.width = new_width;
         if let Some(ref mut output) = self.output {
             if ch == '\t' {
                 for _ in 0..ch_width {
@@ -100,11 +100,11 @@ mod tests {
         let input = "A\tB";
         let mut iter = WidthIterator::new(&uw, input);
         assert_eq!(iter.next(), Some(('A', 1)));
-        assert_eq!(iter.position, 1);
+        assert_eq!(iter.width(), 1);
         assert_eq!(iter.next(), Some(('\t', 3)));
-        assert_eq!(iter.position, 4);
+        assert_eq!(iter.width(), 4);
         assert_eq!(iter.next(), Some(('B', 1)));
-        assert_eq!(iter.position, 5);
+        assert_eq!(iter.width(), 5);
         assert_eq!(iter.next(), None);
     }
 }
