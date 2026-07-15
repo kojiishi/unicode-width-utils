@@ -107,7 +107,7 @@ impl UnicodeWidth {
         IS_CJK.store(is_cjk, Ordering::Relaxed);
     }
 
-    /// Set the size for control characters.
+    /// Set the size of control characters.
     ///
     /// # Examples
     /// ```
