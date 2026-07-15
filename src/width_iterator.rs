@@ -35,6 +35,10 @@ impl<'a, 'b> WidthIterator<'a, 'b> {
         }
     }
 
+    pub(crate) fn width(&self) -> usize {
+        self.position
+    }
+
     #[inline]
     pub(crate) fn set_max_width(&mut self, max_width: usize) {
         self.max_width = max_width;

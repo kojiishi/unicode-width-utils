@@ -153,26 +153,42 @@ impl UnicodeWidth {
     /// Return the total column width of a string.
     ///
     /// This is a wrapper of [`UnicodeWidthStr`].
-    /// It calls `width` or `width_cjk` depending on the configuration.
+    /// It calls `width` or `width_cjk` depending on the configuration,
+    /// unless the [tab size is set][`set_tab_size()`],
+    /// in which case the internal logic computes the width
+    /// by calling [`char_opt()`] repeatedly.
     ///
+    /// [`char_opt()`]: UnicodeWidth::char_opt
+    /// [`set_tab_size()`]: UnicodeWidth::set_tab_size
+    /// [`truncate()`]: UnicodeWidth::truncate
     /// [`UnicodeWidthStr`]: https://docs.rs/unicode-width/latest/unicode_width/trait.UnicodeWidthStr.html
     ///
     /// # Examples
     /// ```
     /// use unicode_width_utils::UnicodeWidth;
     ///
-    /// let uw = UnicodeWidth::new();
+    /// let mut uw = UnicodeWidth::new();
     /// assert_eq!(uw.str("Hello"), 5);
+    /// assert_eq!(uw.str("Hello\t"), 6);
+    /// uw.set_tab_size(4);
+    /// assert_eq!(uw.str("Hello\t"), 8);
     /// ```
     pub fn str(&self, str: &str) -> usize {
+        if self.tab_size > 0 {
+            let mut iter = WidthIterator::new(self, str);
+            iter.consume_all();
+            return iter.width();
+        }
         match self.is_cjk {
             false => UnicodeWidthStr::width(str),
             true => UnicodeWidthStr::width_cjk(str),
         }
     }
 
-    /// Set the tab size for [`truncate()`].
+    /// Set the tab size.
     /// Initially `0`.
+    ///
+    /// This setting is used by [`truncate()`] and [`UnicodeWidth::str()`].
     ///
     /// See also [`set_expand_tab()`].
     ///
@@ -194,9 +210,14 @@ impl UnicodeWidth {
         self.tab_size = tab_size;
     }
 
-    /// Set whether tabs should be expanded to spaces in [`truncate()`].
+    /// Set whether tabs should be expanded to spaces.
     /// Initially `false`.
     ///
+    /// This setting is used by [`truncate()`] and [`UnicodeWidth::str()`].
+    ///
+    /// See also [`set_tab_size()`].
+    ///
+    /// [`set_tab_size()`]: UnicodeWidth::set_tab_size
     /// [`truncate()`]: UnicodeWidth::truncate
     ///
     /// # Examples
@@ -273,6 +294,16 @@ mod tests {
         assert_eq!(cjk.str("\u{2588}"), 2);
         assert_eq!(uw.str("\u{3042}"), 2);
         assert_eq!(cjk.str("\u{3042}"), 2);
+    }
+
+    #[test]
+    fn str_tab() {
+        let mut uw = UnicodeWidth::with_cjk(false);
+        uw.set_tab_size(4);
+        assert_eq!(uw.str("A"), 1);
+        assert_eq!(uw.str("A\t"), 4);
+        assert_eq!(uw.str("A\tB"), 5);
+        assert_eq!(uw.str("A\t\tB"), 9);
     }
 
     #[test]
