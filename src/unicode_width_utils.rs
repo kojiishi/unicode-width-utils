@@ -20,7 +20,9 @@ static IS_CJK: LazyLock<AtomicBool> = LazyLock::new(|| {
 ///
 /// The default CJK mode is initialized at startup
 /// based on the `UNICODE_WIDTH` environment variable,
-/// but can also be dynamically modified using [`UnicodeWidth::set_default_cjk`].
+/// but can also be dynamically modified using [`set_default_cjk()`].
+///
+/// [`set_default_cjk()`]: UnicodeWidth::set_default_cjk
 #[derive(Clone, Debug)]
 pub struct UnicodeWidth {
     is_cjk: bool,
@@ -29,15 +31,6 @@ pub struct UnicodeWidth {
 }
 
 impl Default for UnicodeWidth {
-    /// Create a `UnicodeWidth` instance using the default CJK mode.
-    ///
-    /// The default CJK mode is determined by the global setting,
-    /// which defaults to the value of the `UNICODE_WIDTH` environment variable
-    /// (value `"cjk"` enabling CJK mode).
-    ///
-    /// See also [`set_default_cjk`].
-    ///
-    /// [`set_default_cjk`]: UnicodeWidth::set_default_cjk
     fn default() -> Self {
         Self {
             is_cjk: IS_CJK.load(Ordering::Relaxed),
@@ -54,9 +47,9 @@ impl UnicodeWidth {
     /// which defaults to the value of the `UNICODE_WIDTH` environment variable
     /// (value `"cjk"` enabling CJK mode).
     ///
-    /// See also [`set_default_cjk`].
+    /// See also [`set_default_cjk()`].
     ///
-    /// [`set_default_cjk`]: UnicodeWidth::set_default_cjk
+    /// [`set_default_cjk()`]: UnicodeWidth::set_default_cjk
     pub fn new() -> Self {
         Self::default()
     }
@@ -87,10 +80,11 @@ impl UnicodeWidth {
     /// Set the default CJK configuration dynamically.
     ///
     /// Future instances
-    /// created using [`UnicodeWidth::new`] or [`UnicodeWidth::default`]
+    /// created using [`UnicodeWidth::new()`] or [`UnicodeWidth::default()`]
     /// will inherit this default value
-    /// unless explicitly overridden with [`UnicodeWidth::with_cjk`].
+    /// unless explicitly overridden with [`with_cjk()`].
     ///
+    /// [`with_cjk()`]: `UnicodeWidth::with_cjk`
     /// # Examples
     /// ```
     /// use unicode_width_utils::UnicodeWidth;
@@ -165,7 +159,7 @@ impl UnicodeWidth {
     /// ```
     /// use unicode_width_utils::UnicodeWidth;
     ///
-    /// let uw = UnicodeWidth::with_cjk(false);
+    /// let uw = UnicodeWidth::new();
     /// assert_eq!(uw.str("Hello"), 5);
     /// ```
     pub fn str(&self, str: &str) -> usize {
@@ -175,13 +169,13 @@ impl UnicodeWidth {
         }
     }
 
-    /// Set the tab size for [`truncate`].
+    /// Set the tab size for [`truncate()`].
     /// Initially `0`.
     ///
-    /// See also [`set_expand_tab`].
+    /// See also [`set_expand_tab()`].
     ///
-    /// [`set_expand_tab`]: UnicodeWidth::set_expand_tab
-    /// [`truncate`]: UnicodeWidth::truncate
+    /// [`set_expand_tab()`]: UnicodeWidth::set_expand_tab
+    /// [`truncate()`]: UnicodeWidth::truncate
     ///
     /// # Examples
     /// ```
@@ -198,10 +192,10 @@ impl UnicodeWidth {
         self.tab_size = tab_size;
     }
 
-    /// Set whether tabs should be expanded to spaces in [`truncate`].
+    /// Set whether tabs should be expanded to spaces in [`truncate()`].
     /// Initially `false`.
     ///
-    /// [`truncate`]: UnicodeWidth::truncate
+    /// [`truncate()`]: UnicodeWidth::truncate
     ///
     /// # Examples
     /// ```
@@ -221,24 +215,26 @@ impl UnicodeWidth {
 
     /// Truncate a string slice to a maximum column width.
     ///
-    /// The returned slice will be the longest prefix of `str`
+    /// The returned slice will be the longest prefix of `input`
     /// whose total column width does not exceed `max_width`.
     ///
-    /// See also [`set_tab_size`] and [`set_expand_tab`].
+    /// See also [`set_tab_size()`] and [`set_expand_tab()`].
     ///
-    /// [`set_tab_size`]: UnicodeWidth::set_tab_size
-    /// [`set_expand_tab`]: UnicodeWidth::set_expand_tab
+    /// [`set_tab_size()`]: UnicodeWidth::set_tab_size
+    /// [`set_expand_tab()`]: UnicodeWidth::set_expand_tab
     ///
     /// # Examples
     /// ```
     /// use unicode_width_utils::UnicodeWidth;
     ///
-    /// let uw = UnicodeWidth::with_cjk(false);
+    /// let uw = UnicodeWidth::new();
     /// assert_eq!(uw.truncate("hello", 3), "hel");
     ///
     /// // Truncating CJK text (each 'あ' is 2 columns wide).
+    /// assert_eq!(uw.truncate("あああ", 3), "あ");
+    /// assert_eq!(uw.truncate("A█B", 2), "A█");
+    ///
     /// let cjk = UnicodeWidth::with_cjk(true);
-    /// assert_eq!(cjk.truncate("あああ", 3), "あ");
     /// assert_eq!(cjk.truncate("A█B", 2), "A");
     /// ```
     pub fn truncate<'a>(&self, input: &'a str, max_width: usize) -> Cow<'a, str> {
