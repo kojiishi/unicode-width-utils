@@ -68,7 +68,7 @@ impl<'a, 'b> Iterator for WidthIterator<'a, 'b> {
             }
             tab_size - (self.width % tab_size)
         } else {
-            1
+            self.uw.control_size as usize
         };
         let new_width = self.width + ch_width;
         if new_width > self.max_width {
