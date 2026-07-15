@@ -34,11 +34,15 @@ impl Default for UnicodeWidth {
     /// The default CJK mode is determined by the global setting,
     /// which defaults to the value of the `UNICODE_WIDTH` environment variable
     /// (value `"cjk"` enabling CJK mode).
+    ///
+    /// See also [`set_default_cjk`].
+    ///
+    /// [`set_default_cjk`]: UnicodeWidth::set_default_cjk
     fn default() -> Self {
         Self {
             is_cjk: IS_CJK.load(Ordering::Relaxed),
-            tab_size: 0,
             should_expand_tab: false,
+            tab_size: 0,
         }
     }
 }
@@ -50,12 +54,9 @@ impl UnicodeWidth {
     /// which defaults to the value of the `UNICODE_WIDTH` environment variable
     /// (value `"cjk"` enabling CJK mode).
     ///
-    /// # Examples
-    /// ```
-    /// use unicode_width_utils::UnicodeWidth;
+    /// See also [`set_default_cjk`].
     ///
-    /// let uw = UnicodeWidth::new();
-    /// ```
+    /// [`set_default_cjk`]: UnicodeWidth::set_default_cjk
     pub fn new() -> Self {
         Self::default()
     }
@@ -94,12 +95,12 @@ impl UnicodeWidth {
     /// ```
     /// use unicode_width_utils::UnicodeWidth;
     ///
-    /// // Set default CJK mode to true
+    /// // Set default CJK mode to true.
     /// UnicodeWidth::set_default_cjk(true);
     /// let uw = UnicodeWidth::new();
     /// assert_eq!(uw.char('█'), Some(2));
     ///
-    /// // Set default CJK mode to false
+    /// // Set default CJK mode to false.
     /// UnicodeWidth::set_default_cjk(false);
     /// let uw2 = UnicodeWidth::new();
     /// assert_eq!(uw2.char('█'), Some(1));
@@ -118,8 +119,8 @@ impl UnicodeWidth {
     /// Return `None` for control characters
     /// or other characters without a defined width.
     ///
-    /// This is a wrapper of [`UnicodeWidthChar`],
-    /// calls `width` or `width_cjk` depending on the configuration.
+    /// This is a wrapper of [`UnicodeWidthChar`].
+    /// It calls `width` or `width_cjk` depending on the configuration.
     ///
     /// [`UnicodeWidthChar`]: https://docs.rs/unicode-width/latest/unicode_width/trait.UnicodeWidthChar.html
     ///
@@ -140,8 +141,8 @@ impl UnicodeWidth {
 
     /// Return the total column width of a string.
     ///
-    /// This is a wrapper of [`UnicodeWidthStr`],
-    /// calls `width` or `width_cjk` depending on the configuration.
+    /// This is a wrapper of [`UnicodeWidthStr`].
+    /// It calls `width` or `width_cjk` depending on the configuration.
     ///
     /// [`UnicodeWidthStr`]: https://docs.rs/unicode-width/latest/unicode_width/trait.UnicodeWidthStr.html
     ///
@@ -169,7 +170,7 @@ impl UnicodeWidth {
     ///
     /// # Examples
     /// ```
-    /// use std::borrow::Cow;
+    /// # use std::borrow::Cow;
     /// use unicode_width_utils::UnicodeWidth;
     ///
     /// let mut uw = UnicodeWidth::new();
@@ -189,7 +190,7 @@ impl UnicodeWidth {
     ///
     /// # Examples
     /// ```
-    /// use std::borrow::Cow;
+    /// # use std::borrow::Cow;
     /// use unicode_width_utils::UnicodeWidth;
     ///
     /// let mut uw = UnicodeWidth::new();
@@ -220,7 +221,7 @@ impl UnicodeWidth {
     /// let uw = UnicodeWidth::with_cjk(false);
     /// assert_eq!(uw.truncate("hello", 3), "hel");
     ///
-    /// // Truncating CJK text (each 'あ' is 2 columns wide)
+    /// // Truncating CJK text (each 'あ' is 2 columns wide).
     /// let cjk = UnicodeWidth::with_cjk(true);
     /// assert_eq!(cjk.truncate("あああ", 3), "あ");
     /// assert_eq!(cjk.truncate("A█B", 2), "A");
