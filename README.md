@@ -82,7 +82,7 @@ fn main() {
 Alternatively, you can initialize the default CJK mode
 via the environment variable:
 ```bash
-UNICODE_WIDTH=cjk cargo run
+UNICODE_WIDTH=cjk
 ```
 
 ### String Truncation
