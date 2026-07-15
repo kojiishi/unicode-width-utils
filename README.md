@@ -17,11 +17,19 @@ safe string truncation.
 
 ## Features
 
-- **Dynamic CJK Config**: Treat East Asian Ambiguous characters (such as Greek,
-  Cyrillic, and CJK characters) as either 1 or 2 columns wide.
-- **Environment Variable Override**: Initialize the default CJK mode using
-  `UNICODE_WIDTH=cjk`.
-- **Thread-safe Global Default**: Change the global CJK default at runtime.
+- **Configuration Object**: Provides the configuration object for
+  various different needs.
+  - The tab size and whether to expand them to spaces or not.
+  - The size of control characters.
+  - Whether to use alternate width calculation
+    more suited for CJK contexts or not.
+    It controls East Asian Ambiguous characters
+    (such as Greek, Cyrillic, and some symbol characters)
+    to be 1 or 2 columns wide.
+- **Environment Variable Support**: Initialize the default CJK mode
+  using the `UNICODE_WIDTH=cjk` environment variable,
+  so that end users can change it to match their environment
+  for when applications don't explicitly specify it.
 - **Safe Truncation**: Truncate strings to a specific column width
   without breaking UTF-8 characters,
   including optional tab support.
@@ -102,6 +110,8 @@ fn main() {
     assert_eq!(cjk.truncate("A█B", 2), "A");
 }
 ```
+
+Please see the [documentation][docs] for more details.
 
 ## License
 
