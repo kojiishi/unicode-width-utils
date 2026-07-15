@@ -3,6 +3,8 @@ use std::sync::LazyLock;
 use std::sync::atomic::{AtomicBool, Ordering};
 use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
+use crate::WidthIterator;
+
 static IS_CJK: LazyLock<AtomicBool> = LazyLock::new(|| {
     let is_cjk = match std::env::var("UNICODE_WIDTH") {
         Ok(value) => value.eq_ignore_ascii_case("cjk"),
@@ -26,8 +28,8 @@ static IS_CJK: LazyLock<AtomicBool> = LazyLock::new(|| {
 #[derive(Clone, Debug)]
 pub struct UnicodeWidth {
     is_cjk: bool,
-    should_expand_tab: bool,
-    tab_size: u8,
+    pub(crate) should_expand_tab: bool,
+    pub(crate) tab_size: u8,
 }
 
 impl Default for UnicodeWidth {
@@ -238,44 +240,10 @@ impl UnicodeWidth {
     /// assert_eq!(cjk.truncate("A█B", 2), "A");
     /// ```
     pub fn truncate<'a>(&self, input: &'a str, max_width: usize) -> Cow<'a, str> {
-        let mut width = 0;
-        let mut buffer: Option<String> = None;
-        let tab_size = self.tab_size as usize;
-        for (index, ch) in input.char_indices() {
-            let ch_width = if let Some(ch_width) = self.char_opt(ch) {
-                ch_width
-            } else if ch == '\t' && tab_size > 0 {
-                if buffer.is_none() && self.should_expand_tab {
-                    let mut output = String::with_capacity(input.len() + tab_size * 4);
-                    output.push_str(&input[..index]);
-                    buffer = Some(output);
-                }
-                tab_size - (width % tab_size)
-            } else {
-                0
-            };
-            width += ch_width;
-            if width > max_width {
-                return match buffer {
-                    None => Cow::Borrowed(&input[..index]),
-                    Some(output) => Cow::Owned(output),
-                };
-            }
-
-            if let Some(ref mut output) = buffer {
-                if ch == '\t' {
-                    for _ in 0..ch_width {
-                        output.push(' ');
-                    }
-                } else {
-                    output.push(ch);
-                }
-            }
-        }
-        match buffer {
-            None => Cow::Borrowed(input),
-            Some(output) => Cow::Owned(output),
-        }
+        let mut iter = WidthIterator::new(self, input);
+        iter.set_max_width(max_width);
+        iter.consume_all();
+        iter.into()
     }
 }
 
