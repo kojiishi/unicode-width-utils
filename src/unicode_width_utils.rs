@@ -108,6 +108,11 @@ impl UnicodeWidth {
         IS_CJK.store(is_cjk, Ordering::Relaxed);
     }
 
+    #[deprecated(note = "Please use `char_opt` instead.")]
+    pub fn char(&self, ch: char) -> Option<usize> {
+        self.char_opt(ch)
+    }
+
     /// Return the column width of a character.
     ///
     /// Return `None` for control characters
@@ -126,7 +131,7 @@ impl UnicodeWidth {
     /// assert_eq!(uw.char('A'), Some(1));
     /// assert_eq!(uw.char('\n'), None);
     /// ```
-    pub fn char(&self, ch: char) -> Option<usize> {
+    pub fn char_opt(&self, ch: char) -> Option<usize> {
         match self.is_cjk {
             false => UnicodeWidthChar::width(ch),
             true => UnicodeWidthChar::width_cjk(ch),
@@ -225,7 +230,7 @@ impl UnicodeWidth {
         let mut buffer: Option<String> = None;
         let tab_size = self.tab_size as usize;
         for (index, ch) in input.char_indices() {
-            let ch_width = if let Some(ch_width) = self.char(ch) {
+            let ch_width = if let Some(ch_width) = self.char_opt(ch) {
                 ch_width
             } else if ch == '\t' && tab_size > 0 {
                 if buffer.is_none() && self.should_expand_tab {
@@ -270,12 +275,12 @@ mod tests {
     fn char() {
         let uw = UnicodeWidth::with_cjk(false);
         let cjk = UnicodeWidth::with_cjk(true);
-        assert_eq!(uw.char('A'), Some(1));
-        assert_eq!(cjk.char('A'), Some(1));
-        assert_eq!(uw.char('\u{2588}'), Some(1));
-        assert_eq!(cjk.char('\u{2588}'), Some(2));
-        assert_eq!(uw.char('\u{3042}'), Some(2));
-        assert_eq!(cjk.char('\u{3042}'), Some(2));
+        assert_eq!(uw.char_opt('A'), Some(1));
+        assert_eq!(cjk.char_opt('A'), Some(1));
+        assert_eq!(uw.char_opt('\u{2588}'), Some(1));
+        assert_eq!(cjk.char_opt('\u{2588}'), Some(2));
+        assert_eq!(uw.char_opt('\u{3042}'), Some(2));
+        assert_eq!(cjk.char_opt('\u{3042}'), Some(2));
     }
 
     #[test]
@@ -321,12 +326,12 @@ mod tests {
         let original = IS_CJK.load(Ordering::Relaxed);
 
         UnicodeWidth::set_default_cjk(false);
-        assert_eq!(UnicodeWidth::default().char('\u{2588}'), Some(1));
-        assert_eq!(UnicodeWidth::new().char('\u{2588}'), Some(1));
+        assert_eq!(UnicodeWidth::default().char_opt('\u{2588}'), Some(1));
+        assert_eq!(UnicodeWidth::new().char_opt('\u{2588}'), Some(1));
 
         UnicodeWidth::set_default_cjk(true);
-        assert_eq!(UnicodeWidth::default().char('\u{2588}'), Some(2));
-        assert_eq!(UnicodeWidth::new().char('\u{2588}'), Some(2));
+        assert_eq!(UnicodeWidth::default().char_opt('\u{2588}'), Some(2));
+        assert_eq!(UnicodeWidth::new().char_opt('\u{2588}'), Some(2));
 
         UnicodeWidth::set_default_cjk(original);
     }
