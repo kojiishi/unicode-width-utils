@@ -30,6 +30,7 @@ pub struct UnicodeWidth {
     is_cjk: bool,
     pub(crate) should_expand_tab: bool,
     pub(crate) tab_size: u8,
+    pub(crate) control_size: u8,
 }
 
 impl Default for UnicodeWidth {
@@ -38,6 +39,7 @@ impl Default for UnicodeWidth {
             is_cjk: IS_CJK.load(Ordering::Relaxed),
             should_expand_tab: false,
             tab_size: 0,
+            control_size: 1,
         }
     }
 }
@@ -105,16 +107,34 @@ impl UnicodeWidth {
         IS_CJK.store(is_cjk, Ordering::Relaxed);
     }
 
+    /// Set the size for control characters.
+    ///
+    /// # Examples
+    /// ```
+    /// use unicode_width_utils::UnicodeWidth;
+    ///
+    /// let mut uw = UnicodeWidth::new();
+    /// assert_eq!(uw.char('\t'), 1);
+    /// assert_eq!(uw.str("A\tB"), 3);
+    /// uw.set_control_size(0);
+    /// assert_eq!(uw.char('\t'), 0);
+    /// assert_eq!(uw.str("A\tB"), 2);
+    /// ```
+    pub fn set_control_size(&mut self, size: u8) {
+        self.control_size = size;
+    }
+
     /// Return the column width of a character.
     ///
     /// This is a wrapper of [`UnicodeWidthChar`].
     /// It calls `width` or `width_cjk` depending on the configuration.
     ///
-    /// Control characters are set to 1 column wide,
+    /// Control characters return `1` by default
     /// to match [`UnicodeWidthStr`].
-    /// See also [`char_opt()`] for control characters.
+    /// See also [`char_opt()`] and [`set_control_size()`] for control characters.
     ///
     /// [`char_opt()`]: UnicodeWidth::char_opt
+    /// [`set_control_size()`]: UnicodeWidth::set_control_size
     ///
     /// # Examples
     /// ```
@@ -125,7 +145,7 @@ impl UnicodeWidth {
     /// assert_eq!(uw.char('あ'), 2);
     /// ```
     pub fn char(&self, ch: char) -> usize {
-        self.char_opt(ch).unwrap_or(1)
+        self.char_opt(ch).unwrap_or(self.control_size as usize)
     }
 
     /// Return the column width of a character.
@@ -157,11 +177,14 @@ impl UnicodeWidth {
     ///
     /// This is a wrapper of [`UnicodeWidthStr`].
     /// It calls `width` or `width_cjk` depending on the configuration,
-    /// unless the [tab size is set][`set_tab_size()`],
+    /// unless the [tab size is set][`set_tab_size()`]
+    /// or the [control character size is set][`set_control_size()`],
     /// in which case the internal logic computes the width
-    /// by calling [`char_opt()`] repeatedly.
+    /// by calling [`char_opt()`] or [`char()`] repeatedly.
     ///
+    /// [`char()`]: UnicodeWidth::char
     /// [`char_opt()`]: UnicodeWidth::char_opt
+    /// [`set_control_size()`]: UnicodeWidth::set_control_size
     /// [`set_tab_size()`]: UnicodeWidth::set_tab_size
     /// [`truncate()`]: UnicodeWidth::truncate
     /// [`UnicodeWidthStr`]: https://docs.rs/unicode-width/latest/unicode_width/trait.UnicodeWidthStr.html
@@ -181,6 +204,9 @@ impl UnicodeWidth {
             let mut iter = WidthIterator::new(self, str);
             iter.consume_all();
             return iter.width();
+        }
+        if self.control_size != 1 {
+            return str.chars().map(|ch| self.char(ch)).sum();
         }
         match self.is_cjk {
             false => UnicodeWidthStr::width(str),
