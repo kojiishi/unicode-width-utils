@@ -107,8 +107,11 @@ impl UnicodeWidth {
 
     /// Return the column width of a character.
     ///
-    /// Control characters are set to 0-width
-    /// to match [`UnicodeWidth::str()`].
+    /// This is a wrapper of [`UnicodeWidthChar`].
+    /// It calls `width` or `width_cjk` depending on the configuration.
+    ///
+    /// Control characters are set to 1 column wide,
+    /// to match [`UnicodeWidthStr`].
     /// See also [`char_opt()`] for control characters.
     ///
     /// [`char_opt()`]: UnicodeWidth::char_opt
@@ -122,7 +125,7 @@ impl UnicodeWidth {
     /// assert_eq!(uw.char('あ'), 2);
     /// ```
     pub fn char(&self, ch: char) -> usize {
-        self.char_opt(ch).unwrap_or(0)
+        self.char_opt(ch).unwrap_or(1)
     }
 
     /// Return the column width of a character.
@@ -326,10 +329,11 @@ mod tests {
         assert_eq!(uw.truncate("\u{3042}", 2), "\u{3042}");
         assert_eq!(uw.truncate("\u{3042}", 3), "\u{3042}");
 
-        // Control characters with 0 width.
-        assert_eq!(uw.truncate("A\nB", 1), "A\n");
-        assert_eq!(uw.truncate("A\nB", 2), "A\nB");
-        assert_eq!(uw.truncate("\nA", 0), "\n");
+        // Control characters with 1 column wide.
+        assert_eq!(uw.truncate("A\nB", 1), "A");
+        assert_eq!(uw.truncate("A\nB", 2), "A\n");
+        assert_eq!(uw.truncate("\nA", 0), "");
+        assert_eq!(uw.truncate("\nA", 1), "\n");
     }
 
     #[test]
@@ -347,13 +351,14 @@ mod tests {
         UnicodeWidth::set_default_cjk(original);
     }
 
-    // If `tab_size` = 0, tab behaves as 0-width control character.
+    // If `tab_size` = 0, tab behaves as 1 column wide control character.
     #[test]
-    fn truncate_tabs_zero() {
+    fn truncate_tabs_no_tab_size() {
         let mut uw = UnicodeWidth::new();
         for _ in 0..2 {
-            assert_eq!(uw.truncate("A\tB", 1), Cow::Borrowed("A\t"));
-            assert_eq!(uw.truncate("A\tB", 2), Cow::Borrowed("A\tB"));
+            assert_eq!(uw.truncate("A\tB", 1), Cow::Borrowed("A"));
+            assert_eq!(uw.truncate("A\tB", 2), Cow::Borrowed("A\t"));
+            assert_eq!(uw.truncate("A\tB", 3), Cow::Borrowed("A\tB"));
             uw.set_expand_tab(true);
         }
     }

@@ -68,7 +68,7 @@ impl<'a, 'b> Iterator for WidthIterator<'a, 'b> {
             }
             tab_size - (self.position % tab_size)
         } else {
-            0
+            1
         };
         let new_position = self.position + ch_width;
         if new_position > self.max_width {
