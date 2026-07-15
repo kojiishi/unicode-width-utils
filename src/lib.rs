@@ -31,5 +31,7 @@
 //! [`unicode-width` crate]: https://crates.io/crates/unicode-width
 
 mod unicode_width_utils;
+mod width_iterator;
 
 pub use unicode_width_utils::UnicodeWidth;
+pub(crate) use width_iterator::WidthIterator;
