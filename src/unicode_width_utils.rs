@@ -64,13 +64,16 @@ impl UnicodeWidth {
     /// East Asian Ambiguous characters will be treated as 2 columns wide.
     /// If false, they will be treated as 1 column wide.
     ///
+    /// See also [`set_cjk()`].
+    ///
+    /// [`set_cjk()`]: UnicodeWidth::set_cjk
+    ///
     /// # Examples
     /// ```
     /// use unicode_width_utils::UnicodeWidth;
     ///
     /// let non_cjk = UnicodeWidth::with_cjk(false);
     /// assert_eq!(non_cjk.char('█'), 1);
-    ///
     /// let cjk = UnicodeWidth::with_cjk(true);
     /// assert_eq!(cjk.char('█'), 2);
     /// ```
@@ -81,13 +84,40 @@ impl UnicodeWidth {
         }
     }
 
+    /// Set to whether to perform an alternate width calculation
+    /// more suited to CJK contexts or not.
+    ///
+    /// When set to `true`,
+    /// characters in the Ambiguous category according to
+    /// [Unicode Standard Annex #11] as 2 columns wide.
+    ///
+    /// See also the ["cjk" feature flag] and
+    /// [`UnicodeWidthChar::width_cjk()`].
+    ///
+    /// ["cjk" feature flag]: https://docs.rs/unicode-width/latest/unicode_width/#cjk-feature-flag
+    /// [Unicode Standard Annex #11]: https://www.unicode.org/reports/tr11/
+    ///
+    /// # Examples
+    /// ```
+    /// use unicode_width_utils::UnicodeWidth;
+    ///
+    /// let mut uw = UnicodeWidth::with_cjk(false);
+    /// assert_eq!(uw.char('█'), 1);
+    /// uw.set_cjk(true);
+    /// assert_eq!(uw.char('█'), 2);
+    /// ```
+    pub fn set_cjk(&mut self, is_cjk: bool) {
+        self.is_cjk = is_cjk;
+    }
+
     /// Set the default CJK configuration dynamically.
     ///
     /// Future instances
     /// created using [`UnicodeWidth::new()`] or [`UnicodeWidth::default()`]
     /// will inherit this default value
-    /// unless explicitly overridden with [`with_cjk()`].
+    /// unless explicitly overridden with [`with_cjk()`] or [`set_cjk()`].
     ///
+    /// [`set_cjk()`]: UnicodeWidth::set_cjk
     /// [`with_cjk()`]: `UnicodeWidth::with_cjk`
     /// # Examples
     /// ```
@@ -95,13 +125,13 @@ impl UnicodeWidth {
     ///
     /// // Set default CJK mode to true.
     /// UnicodeWidth::set_default_cjk(true);
-    /// let uw = UnicodeWidth::new();
-    /// assert_eq!(uw.char('█'), 2);
+    /// let cjk = UnicodeWidth::new();
+    /// assert_eq!(cjk.char('█'), 2);
     ///
     /// // Set default CJK mode to false.
     /// UnicodeWidth::set_default_cjk(false);
-    /// let uw2 = UnicodeWidth::new();
-    /// assert_eq!(uw2.char('█'), 1);
+    /// let non_cjk = UnicodeWidth::new();
+    /// assert_eq!(non_cjk.char('█'), 1);
     /// ```
     pub fn set_default_cjk(is_cjk: bool) {
         IS_CJK.store(is_cjk, Ordering::Relaxed);
