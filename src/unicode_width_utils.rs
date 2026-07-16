@@ -124,6 +124,57 @@ impl UnicodeWidth {
         self.control_size = size;
     }
 
+    /// Set the tab size.
+    /// Initially `0`.
+    ///
+    /// This setting is used by [`truncate()`] and [`UnicodeWidth::str()`].
+    ///
+    /// See also [`set_expand_tab()`].
+    ///
+    /// [`set_expand_tab()`]: UnicodeWidth::set_expand_tab
+    /// [`truncate()`]: UnicodeWidth::truncate
+    ///
+    /// # Examples
+    /// ```
+    /// # use std::borrow::Cow;
+    /// use unicode_width_utils::UnicodeWidth;
+    ///
+    /// let mut uw = UnicodeWidth::new();
+    /// uw.set_tab_size(4);
+    /// assert_eq!(uw.truncate("A\tB", 3), Cow::Borrowed("A"));
+    /// assert_eq!(uw.truncate("A\tB", 4), Cow::Borrowed("A\t"));
+    /// assert_eq!(uw.truncate("A\tB", 5), Cow::Borrowed("A\tB"));
+    /// ```
+    pub fn set_tab_size(&mut self, tab_size: u8) {
+        self.tab_size = tab_size;
+    }
+
+    /// Set whether tabs should be expanded to spaces.
+    /// Initially `false`.
+    ///
+    /// This setting is used by [`truncate()`] and [`UnicodeWidth::str()`].
+    ///
+    /// See also [`set_tab_size()`].
+    ///
+    /// [`set_tab_size()`]: UnicodeWidth::set_tab_size
+    /// [`truncate()`]: UnicodeWidth::truncate
+    ///
+    /// # Examples
+    /// ```
+    /// # use std::borrow::Cow;
+    /// use unicode_width_utils::UnicodeWidth;
+    ///
+    /// let mut uw = UnicodeWidth::new();
+    /// uw.set_tab_size(4);
+    /// uw.set_expand_tab(true);
+    /// assert_eq!(uw.truncate("A\tB", 3), Cow::Borrowed("A"));
+    /// assert_eq!(uw.truncate("A\tB", 4), Cow::Owned::<str>("A   ".into()));
+    /// assert_eq!(uw.truncate("A\tB", 5), Cow::Owned::<str>("A   B".into()));
+    /// ```
+    pub fn set_expand_tab(&mut self, should_expand_tab: bool) {
+        self.should_expand_tab = should_expand_tab;
+    }
+
     /// Return the column width of a character.
     ///
     /// This is a wrapper of [`UnicodeWidthChar`].
@@ -212,57 +263,6 @@ impl UnicodeWidth {
             false => UnicodeWidthStr::width(str),
             true => UnicodeWidthStr::width_cjk(str),
         }
-    }
-
-    /// Set the tab size.
-    /// Initially `0`.
-    ///
-    /// This setting is used by [`truncate()`] and [`UnicodeWidth::str()`].
-    ///
-    /// See also [`set_expand_tab()`].
-    ///
-    /// [`set_expand_tab()`]: UnicodeWidth::set_expand_tab
-    /// [`truncate()`]: UnicodeWidth::truncate
-    ///
-    /// # Examples
-    /// ```
-    /// # use std::borrow::Cow;
-    /// use unicode_width_utils::UnicodeWidth;
-    ///
-    /// let mut uw = UnicodeWidth::new();
-    /// uw.set_tab_size(4);
-    /// assert_eq!(uw.truncate("A\tB", 3), Cow::Borrowed("A"));
-    /// assert_eq!(uw.truncate("A\tB", 4), Cow::Borrowed("A\t"));
-    /// assert_eq!(uw.truncate("A\tB", 5), Cow::Borrowed("A\tB"));
-    /// ```
-    pub fn set_tab_size(&mut self, tab_size: u8) {
-        self.tab_size = tab_size;
-    }
-
-    /// Set whether tabs should be expanded to spaces.
-    /// Initially `false`.
-    ///
-    /// This setting is used by [`truncate()`] and [`UnicodeWidth::str()`].
-    ///
-    /// See also [`set_tab_size()`].
-    ///
-    /// [`set_tab_size()`]: UnicodeWidth::set_tab_size
-    /// [`truncate()`]: UnicodeWidth::truncate
-    ///
-    /// # Examples
-    /// ```
-    /// # use std::borrow::Cow;
-    /// use unicode_width_utils::UnicodeWidth;
-    ///
-    /// let mut uw = UnicodeWidth::new();
-    /// uw.set_tab_size(4);
-    /// uw.set_expand_tab(true);
-    /// assert_eq!(uw.truncate("A\tB", 3), Cow::Borrowed("A"));
-    /// assert_eq!(uw.truncate("A\tB", 4), Cow::Owned::<str>("A   ".into()));
-    /// assert_eq!(uw.truncate("A\tB", 5), Cow::Owned::<str>("A   B".into()));
-    /// ```
-    pub fn set_expand_tab(&mut self, should_expand_tab: bool) {
-        self.should_expand_tab = should_expand_tab;
     }
 
     /// Truncate a string slice to a maximum column width.
