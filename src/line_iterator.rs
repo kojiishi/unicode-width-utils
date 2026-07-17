@@ -4,13 +4,24 @@ use std::borrow::Cow;
 
 /// An iterator over chunks of a string based on display width.
 ///
-/// All configurations in [`UnicodeWidth`] such as tab expansion supported.
+/// It supports all configurations in [`UnicodeWidth`] such as tab expansion.
 ///
 /// Unlike [`UnicodeWidth::truncate()`],
 /// each line is guaranteed to have at least one character,
 /// even if it is wider than `max_width`.
 ///
 /// See also [`UnicodeWidth::lines()`].
+///
+/// # Examples
+/// ```
+/// use unicode_width_utils::UnicodeWidth;
+///
+/// let uw = UnicodeWidth::new();
+/// assert_eq!(
+///     uw.lines("12345678", 3).collect::<Vec<_>>(),
+///     vec!["123", "456", "78"]
+/// );
+/// ```
 #[derive(Debug)]
 pub struct LineIterator<'a, 'b> {
     uw: &'a UnicodeWidth,
@@ -20,7 +31,7 @@ pub struct LineIterator<'a, 'b> {
 
 impl<'a, 'b> LineIterator<'a, 'b> {
     /// Create a new `LineIterator` from a string slice.
-    pub fn new(uw: &'a UnicodeWidth, input: &'b str, max_width: usize) -> Self {
+    pub(crate) fn new(uw: &'a UnicodeWidth, input: &'b str, max_width: usize) -> Self {
         Self {
             uw,
             input,

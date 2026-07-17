@@ -331,7 +331,7 @@ impl UnicodeWidth {
         iter.into()
     }
 
-    /// Return a `LineIterator`
+    /// Return a [`LineIterator`]
     /// to iterate over chunks of a string based on display width.
     ///
     /// Unlike [`truncate()`],
@@ -345,8 +345,10 @@ impl UnicodeWidth {
     /// use unicode_width_utils::UnicodeWidth;
     ///
     /// let uw = UnicodeWidth::new();
-    /// let lines: Vec<_> = uw.lines("12345678", 3).collect();
-    /// assert_eq!(lines, vec!["123", "456", "78"]);
+    /// assert_eq!(
+    ///     uw.lines("12345678", 3).collect::<Vec<_>>(),
+    ///     vec!["123", "456", "78"]
+    /// );
     /// ```
     pub fn lines<'a>(&self, input: &'a str, max_width: usize) -> LineIterator<'_, 'a> {
         LineIterator::new(self, input, max_width)
