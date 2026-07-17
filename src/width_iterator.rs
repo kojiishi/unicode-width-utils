@@ -35,6 +35,7 @@ impl<'a, 'b> WidthIterator<'a, 'b> {
         }
     }
 
+    #[inline]
     pub(crate) fn width(&self) -> usize {
         self.width
     }

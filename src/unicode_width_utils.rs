@@ -106,6 +106,7 @@ impl UnicodeWidth {
     /// uw.set_cjk(true);
     /// assert_eq!(uw.char('█'), 2);
     /// ```
+    #[inline]
     pub fn set_cjk(&mut self, is_cjk: bool) {
         self.is_cjk = is_cjk;
     }
@@ -150,6 +151,7 @@ impl UnicodeWidth {
     /// assert_eq!(uw.char('\t'), 0);
     /// assert_eq!(uw.str("A\tB"), 2);
     /// ```
+    #[inline]
     pub fn set_control_size(&mut self, size: u8) {
         self.control_size = size;
     }
@@ -175,6 +177,7 @@ impl UnicodeWidth {
     /// assert_eq!(uw.truncate("A\tB", 4), Cow::Borrowed("A\t"));
     /// assert_eq!(uw.truncate("A\tB", 5), Cow::Borrowed("A\tB"));
     /// ```
+    #[inline]
     pub fn set_tab_size(&mut self, tab_size: u8) {
         self.tab_size = tab_size;
     }
@@ -201,6 +204,7 @@ impl UnicodeWidth {
     /// assert_eq!(uw.truncate("A\tB", 4), Cow::Owned::<str>("A   ".into()));
     /// assert_eq!(uw.truncate("A\tB", 5), Cow::Owned::<str>("A   B".into()));
     /// ```
+    #[inline]
     pub fn set_expand_tab(&mut self, should_expand_tab: bool) {
         self.should_expand_tab = should_expand_tab;
     }
