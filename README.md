@@ -22,6 +22,7 @@ safe string truncation.
   for various different needs.
   - The tab size and whether to expand them to spaces or not.
   - The size of control characters.
+  - Whether to make ANSI escape sequences zero-width or not.
   - Whether to use alternate width calculation
     more suited for CJK contexts or not.
     It controls East Asian Ambiguous characters
@@ -55,6 +56,44 @@ fn main() {
 }
 ```
 
+### Tab Characters
+
+Tab characters can be 1 column wide or a jump to the next tab stop.
+You can configure the tab size,
+along with whether to convert them to spaces or not.
+
+```rust
+use unicode_width_utils::UnicodeWidth;
+
+fn main() {
+    // Treat ambiguous characters as 1 column wide.
+    let mut uw = UnicodeWidth::with_cjk(false);
+    assert_eq!(uw.str("A\tB"), 3);
+    uw.set_tab_size(4);
+    assert_eq!(uw.str("A\tB"), 5);
+    uw.set_expand_tab(true);
+    assert_eq!(uw.truncate("A\tBC", 5), "A   B");
+}
+```
+
+### ANSI Escape Sequences
+
+You can configure whether to make ANSI escape sequences zero-width or not.
+
+```rust
+use unicode_width_utils::UnicodeWidth;
+
+fn main() {
+    // Treat ambiguous characters as 1 column wide.
+    let mut uw = UnicodeWidth::with_cjk(false);
+    let input = "A\x1B[31mZZ";
+    assert_eq!(uw.str(input), 8);
+    uw.set_ansi(true);
+    assert_eq!(uw.str(input), 3);
+    assert_eq!(uw.truncate(input, 2), Cow::Borrowed("A\x1B[31mZ"));
+}
+```
+
 ### CJK Ambiguous Widths
 
 You can explicitly configure whether East Asian Ambiguous characters are treated
@@ -71,28 +110,6 @@ fn main() {
     uw.set_cjk(true);
     assert_eq!(cjk.char('█'), 2);
 }
-```
-
-### Global Default Configuration
-
-You can change the default configuration
-for future instances created via `UnicodeWidth::new()`:
-```rust
-use unicode_width_utils::UnicodeWidth;
-
-fn main() {
-    // Globally set the default mode to CJK.
-    UnicodeWidth::set_default_cjk(true);
-    
-    let uw = UnicodeWidth::new();
-    assert_eq!(uw.char('█'), 2);
-}
-```
-
-Alternatively, you can initialize the default CJK mode
-via the environment variable:
-```bash
-UNICODE_WIDTH=cjk
 ```
 
 ### String Truncation
@@ -122,8 +139,10 @@ use unicode_width_utils::UnicodeWidth;
 
 fn main() {
     let uw = UnicodeWidth::new();
-    let lines: Vec<_> = uw.lines("12345678", 3).collect();
-    assert_eq!(lines, vec!["123", "456", "78"]);
+    assert_eq!(
+        uw.lines("12345678", 3).collect::<Vec<_>>(),
+        vec!["123", "456", "78"]
+    );
 }
 ```
 
