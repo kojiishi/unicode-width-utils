@@ -3,6 +3,7 @@ use std::sync::LazyLock;
 use std::sync::atomic::{AtomicBool, Ordering};
 use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
+use crate::LineIterator;
 use crate::WidthIterator;
 
 static IS_CJK: LazyLock<AtomicBool> = LazyLock::new(|| {
@@ -329,6 +330,27 @@ impl UnicodeWidth {
         iter.consume_all();
         iter.into()
     }
+
+    /// Return a `LineIterator`
+    /// to iterate over chunks of a string based on display width.
+    ///
+    /// Unlike [`truncate()`],
+    /// each line is guaranteed to have at least one character,
+    /// even if it is wider than `max_width`.
+    ///
+    /// [`truncate()`]: UnicodeWidth::truncate
+    ///
+    /// # Examples
+    /// ```
+    /// use unicode_width_utils::UnicodeWidth;
+    ///
+    /// let uw = UnicodeWidth::new();
+    /// let lines: Vec<_> = uw.lines("12345678", 3).collect();
+    /// assert_eq!(lines, vec!["123", "456", "78"]);
+    /// ```
+    pub fn lines<'a>(&self, input: &'a str, max_width: usize) -> LineIterator<'_, 'a> {
+        LineIterator::new(self, input, max_width)
+    }
 }
 
 #[cfg(test)]
@@ -430,5 +452,14 @@ mod tests {
         uw.set_expand_tab(true);
         assert_eq!(uw.truncate("\t\t", 7), Cow::Owned::<str>("    ".into()));
         assert_eq!(uw.truncate("\t\t", 8), Cow::Owned::<str>("        ".into()));
+    }
+
+    #[test]
+    fn lines_tabs_expand() {
+        let mut uw = UnicodeWidth::new();
+        uw.set_tab_size(4);
+        uw.set_expand_tab(true);
+        let lines: Vec<_> = uw.lines("hi\tworld rust", 8).collect();
+        assert_eq!(lines, vec!["hi  worl", "d rust"]);
     }
 }

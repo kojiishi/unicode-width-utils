@@ -17,8 +17,9 @@ safe string truncation.
 
 ## Features
 
-- **Configuration Object**: Provides the configuration object for
-  various different needs.
+- **Configuration Object**: Provides a configuration object
+  that is easy to pass around
+  for various different needs.
   - The tab size and whether to expand them to spaces or not.
   - The size of control characters.
   - Whether to use alternate width calculation
@@ -26,13 +27,14 @@ safe string truncation.
     It controls East Asian Ambiguous characters
     (such as Greek, Cyrillic, and some symbol characters)
     to be 1 or 2 columns wide.
-- **Environment Variable Support**: Initialize the default CJK mode
-  using the `UNICODE_WIDTH=cjk` environment variable,
-  so that end users can change it to match their environment
-  for when applications don't explicitly specify it.
+  - Also support the `UNICODE_WIDTH=cjk` environment variable
+    to initialize the default CJK mode.
+    This enables end users in CJK contexts
+    to change the default mode to match their environments.
 - **Safe Truncation**: Truncate strings to a specific column width
   without breaking UTF-8 characters,
   including optional tab support.
+- **Line Wrapping**: Wrap strings to multiple lines at a specific column.
 
 ## Installation
 ```bash
@@ -61,12 +63,12 @@ as 1 or 2 columns wide:
 use unicode_width_utils::UnicodeWidth;
 
 fn main() {
-    // Treat ambiguous characters as 1 column wide
-    let non_cjk = UnicodeWidth::with_cjk(false);
-    assert_eq!(non_cjk.char('█'), 1);
+    // Treat ambiguous characters as 1 column wide.
+    let mut uw = UnicodeWidth::with_cjk(false);
+    assert_eq!(uw.char('█'), 1);
 
-    // Treat ambiguous characters as 2 columns wide (CJK mode)
-    let cjk = UnicodeWidth::with_cjk(true);
+    // Treat ambiguous characters as 2 columns wide (CJK mode).
+    uw.set_cjk(true);
     assert_eq!(cjk.char('█'), 2);
 }
 ```
@@ -79,7 +81,7 @@ for future instances created via `UnicodeWidth::new()`:
 use unicode_width_utils::UnicodeWidth;
 
 fn main() {
-    // Globally set the default mode to CJK
+    // Globally set the default mode to CJK.
     UnicodeWidth::set_default_cjk(true);
     
     let uw = UnicodeWidth::new();
@@ -101,20 +103,36 @@ Truncate a string slice so that its total display width does not exceed a maximu
 use unicode_width_utils::UnicodeWidth;
 
 fn main() {
-    let uw = UnicodeWidth::with_cjk(false);
+    let mut uw = UnicodeWidth::new();
     assert_eq!(uw.truncate("hello", 3), "hel");
+    // 'あ' is 2 columns wide.
+    assert_eq!(uw.truncate("あああ", 3), "あ");
 
-    let cjk = UnicodeWidth::with_cjk(true);
-    // 'あ' is 2 columns wide
-    assert_eq!(cjk.truncate("あああ", 3), "あ");
-    assert_eq!(cjk.truncate("A█B", 2), "A");
+    uw.set_tab_size(4);
+    assert_eq!(uw.truncate("A\tB", 4), Cow::Owned::<str>("A\t".into()));
+    uw.set_expand_tab(true);
+    assert_eq!(uw.truncate("A\tB", 4), Cow::Owned::<str>("A   ".into()));
 }
 ```
 
-Please see the [documentation][docs] for more details.
+### Line Wrapping
+
+```rust
+use unicode_width_utils::UnicodeWidth;
+
+fn main() {
+    let uw = UnicodeWidth::new();
+    let lines: Vec<_> = uw.lines("12345678", 3).collect();
+    assert_eq!(lines, vec!["123", "456", "78"]);
+}
+```
+
+Please see the [documentation][docs] for more details,
+and [releases] for the change history.
 
 ## License
 
 Licensed under the Apache License, Version 2.0.
 
+[releases]: https://github.com/kojiishi/unicode-width-utils/releases
 [`unicode-width` crate]: https://crates.io/crates/unicode-width

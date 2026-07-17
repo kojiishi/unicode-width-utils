@@ -8,8 +8,9 @@ pub(crate) struct WidthIterator<'a, 'b> {
     input_chars: CharIndices<'b>,
     width: usize,
     max_width: usize,
-    input_end_index: Option<usize>,
+    pub(crate) input_end_index: Option<usize>,
     output: Option<String>,
+    include_at_least_one: bool,
 }
 
 impl<'a, 'b> From<WidthIterator<'a, 'b>> for Cow<'b, str> {
@@ -32,6 +33,7 @@ impl<'a, 'b> WidthIterator<'a, 'b> {
             max_width: usize::MAX,
             input_end_index: None,
             output: None,
+            include_at_least_one: false,
         }
     }
 
@@ -45,8 +47,14 @@ impl<'a, 'b> WidthIterator<'a, 'b> {
         self.max_width = max_width;
     }
 
+    #[inline]
+    pub(crate) fn set_include_at_least_one(&mut self, include: bool) {
+        self.include_at_least_one = include;
+    }
+
     pub(crate) fn consume_all(&mut self) {
-        for _ in self {}
+        for _ in self.by_ref() {}
+        assert!(self.input_end_index.is_some());
     }
 }
 
@@ -73,8 +81,12 @@ impl<'a, 'b> Iterator for WidthIterator<'a, 'b> {
         };
         let new_width = self.width + ch_width;
         if new_width > self.max_width {
-            self.input_end_index = Some(index);
-            return None;
+            if index == 0 && self.include_at_least_one {
+                // Bypass maximum width check for the first character.
+            } else {
+                self.input_end_index = Some(index);
+                return None;
+            }
         }
         self.width = new_width;
         if let Some(ref mut output) = self.output {
