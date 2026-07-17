@@ -29,6 +29,7 @@ static IS_CJK: LazyLock<AtomicBool> = LazyLock::new(|| {
 #[derive(Clone, Debug)]
 pub struct UnicodeWidth {
     is_cjk: bool,
+    pub(crate) is_ansi: bool,
     pub(crate) should_expand_tab: bool,
     pub(crate) tab_size: u8,
     pub(crate) control_size: u8,
@@ -38,6 +39,7 @@ impl Default for UnicodeWidth {
     fn default() -> Self {
         Self {
             is_cjk: IS_CJK.load(Ordering::Relaxed),
+            is_ansi: false,
             should_expand_tab: false,
             tab_size: 0,
             control_size: 1,
@@ -85,7 +87,7 @@ impl UnicodeWidth {
         }
     }
 
-    /// Set to whether to perform an alternate width calculation
+    /// Set whether to perform an alternate width calculation
     /// more suited to CJK contexts or not.
     ///
     /// When set to `true`,
@@ -137,6 +139,27 @@ impl UnicodeWidth {
     /// ```
     pub fn set_default_cjk(is_cjk: bool) {
         IS_CJK.store(is_cjk, Ordering::Relaxed);
+    }
+
+    /// Set whether to make ANSI escape sequences zero-width or not.
+    ///
+    /// Support Fe, CSI, OSC, DCS, SOS, PM, and APC sequences.
+    ///
+    /// # Examples
+    /// ```
+    /// # use std::borrow::Cow;
+    /// use unicode_width_utils::UnicodeWidth;
+    ///
+    /// let mut uw = UnicodeWidth::new();
+    /// let input = "A\x1B[31mZZ";
+    /// assert_eq!(uw.str(input), 8);
+    /// uw.set_ansi(true);
+    /// assert_eq!(uw.str(input), 3);
+    /// assert_eq!(uw.truncate(input, 2), Cow::Borrowed("A\x1B[31mZ"));
+    /// ```
+    #[inline]
+    pub fn set_ansi(&mut self, is_ansi: bool) {
+        self.is_ansi = is_ansi;
     }
 
     /// Set the size of control characters.
@@ -263,13 +286,15 @@ impl UnicodeWidth {
     ///
     /// This is a wrapper of [`UnicodeWidthStr`].
     /// It calls `width` or `width_cjk` depending on the configuration,
-    /// unless the [tab size is set][`set_tab_size()`]
-    /// or the [control character size is set][`set_control_size()`],
-    /// in which case the internal logic computes the width
-    /// by calling [`char_opt()`] or [`char()`] repeatedly.
+    /// unless the [tab size][`set_tab_size()`],
+    /// the [control character size][`set_control_size()`],
+    /// or the [ANSI sequence][`set_ansi()`] is set,
+    /// in which cases the internal logic computes the width
+    /// by calling [`char()`] or [`char_opt()`] repeatedly.
     ///
     /// [`char()`]: UnicodeWidth::char
     /// [`char_opt()`]: UnicodeWidth::char_opt
+    /// [`set_ansi()`]: UnicodeWidth::set_ansi
     /// [`set_control_size()`]: UnicodeWidth::set_control_size
     /// [`set_tab_size()`]: UnicodeWidth::set_tab_size
     /// [`truncate()`]: UnicodeWidth::truncate
@@ -286,7 +311,7 @@ impl UnicodeWidth {
     /// assert_eq!(uw.str("Hello\t"), 8);
     /// ```
     pub fn str(&self, str: &str) -> usize {
-        if self.tab_size > 0 {
+        if self.tab_size > 0 || self.is_ansi {
             let mut iter = WidthIterator::new(self, str);
             iter.consume_all();
             return iter.width();
@@ -463,5 +488,26 @@ mod tests {
         uw.set_expand_tab(true);
         let lines: Vec<_> = uw.lines("hi\tworld rust", 8).collect();
         assert_eq!(lines, vec!["hi  worl", "d rust"]);
+    }
+
+    #[test]
+    fn ansi_tabs() {
+        let mut uw = UnicodeWidth::new();
+        let input = "A\x1B[31mZZ";
+        assert_eq!(uw.str(input), 8);
+        uw.set_ansi(true);
+        assert_eq!(uw.str(input), 3);
+        assert_eq!(uw.truncate(input, 2), Cow::Borrowed("A\x1B[31mZ"));
+
+        uw.set_tab_size(4);
+        let input_tab = "A\tA\x1B[31mZZ";
+        assert_eq!(uw.str(input_tab), 7);
+        assert_eq!(uw.truncate(input_tab, 6), Cow::Borrowed("A\tA\x1B[31mZ"));
+
+        uw.set_expand_tab(true);
+        assert_eq!(
+            uw.truncate(input_tab, 6),
+            Cow::Owned::<str>("A   A\x1B[31mZ".to_string())
+        );
     }
 }
