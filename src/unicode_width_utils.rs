@@ -143,7 +143,7 @@ impl UnicodeWidth {
 
     /// Set whether to make ANSI escape sequences zero-width or not.
     ///
-    /// Support Fe, CSI, OSC, DCS, SOS, PM, and APC sequences.
+    /// Fe, CSI, OSC, DCS, SOS, PM, and APC sequences are supported.
     ///
     /// # Examples
     /// ```

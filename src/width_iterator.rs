@@ -186,6 +186,21 @@ mod tests {
     }
 
     #[test]
+    fn ansi_next_at_start_end() {
+        let mut uw = UnicodeWidth::new();
+        uw.set_ansi(true);
+        let mut iter = WidthIterator::new(&uw, "\x1B[31mZ");
+        assert_eq!(iter.next_char(), Some((5, 'Z', 0)));
+        assert_eq!(iter.next_char(), None);
+
+        uw.set_tab_size(4);
+        uw.set_expand_tab(true);
+        let mut iter = WidthIterator::new(&uw, "\t\x1B[31m");
+        assert_eq!(iter.next_char(), Some((0, '\t', 0)));
+        assert_eq!(iter.next_char(), None);
+    }
+
+    #[test]
     fn ansi_variations() {
         let tests = vec![
             // CSI: Colors and Cursor.
