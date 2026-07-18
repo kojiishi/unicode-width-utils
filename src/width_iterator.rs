@@ -79,9 +79,8 @@ impl<'a, 'b> WidthIterator<'a, 'b> {
         assert!(self.input_end_index.is_some());
     }
 
-    fn next_char(&mut self) -> Option<(usize, char, usize)> {
+    fn next_char(&mut self) -> Option<(usize, char)> {
         let (mut index, mut ch) = self.input_chars.next()?;
-        let first_index = index;
         while ch == 0x1B as char
             && self.uw.is_ansi
             && let Some(m) = RE_ANSI.find(&self.input_str[index + 1..])
@@ -91,7 +90,7 @@ impl<'a, 'b> WidthIterator<'a, 'b> {
             }
             (index, ch) = self.input_chars.next()?;
         }
-        Some((index, ch, first_index))
+        Some((index, ch))
     }
 
     fn set_input_end_index(&mut self, index: usize) {
@@ -110,7 +109,7 @@ impl<'a, 'b> Iterator for WidthIterator<'a, 'b> {
     type Item = (char, usize);
 
     fn next(&mut self) -> Option<Self::Item> {
-        let Some((index, ch, _skipped_index)) = self.next_char() else {
+        let Some((index, ch)) = self.next_char() else {
             self.set_input_end_index(self.input_str.len());
             return None;
         };
@@ -175,13 +174,13 @@ mod tests {
         let mut uw = UnicodeWidth::new();
         uw.set_ansi(true);
         let mut iter = WidthIterator::new(&uw, "A\x1B[31mZ");
-        assert_eq!(iter.next_char(), Some((0, 'A', 0)));
-        assert_eq!(iter.next_char(), Some((6, 'Z', 1)));
+        assert_eq!(iter.next_char(), Some((0, 'A')));
+        assert_eq!(iter.next_char(), Some((6, 'Z')));
         assert_eq!(iter.next_char(), None);
 
         let mut iter = WidthIterator::new(&uw, "A\x1BDZ");
-        assert_eq!(iter.next_char(), Some((0, 'A', 0)));
-        assert_eq!(iter.next_char(), Some((3, 'Z', 1)));
+        assert_eq!(iter.next_char(), Some((0, 'A')));
+        assert_eq!(iter.next_char(), Some((3, 'Z')));
         assert_eq!(iter.next_char(), None);
     }
 
@@ -190,13 +189,13 @@ mod tests {
         let mut uw = UnicodeWidth::new();
         uw.set_ansi(true);
         let mut iter = WidthIterator::new(&uw, "\x1B[31mZ");
-        assert_eq!(iter.next_char(), Some((5, 'Z', 0)));
+        assert_eq!(iter.next_char(), Some((5, 'Z')));
         assert_eq!(iter.next_char(), None);
 
         uw.set_tab_size(4);
         uw.set_expand_tab(true);
         let mut iter = WidthIterator::new(&uw, "\t\x1B[31m");
-        assert_eq!(iter.next_char(), Some((0, '\t', 0)));
+        assert_eq!(iter.next_char(), Some((0, '\t')));
         assert_eq!(iter.next_char(), None);
     }
 
@@ -224,7 +223,7 @@ mod tests {
         for (input, expected) in tests {
             let mut iter = WidthIterator::new(&uw, input);
             let mut actual = String::new();
-            while let Some((_, ch, _)) = iter.next_char() {
+            while let Some((_, ch)) = iter.next_char() {
                 actual.push(ch);
             }
             assert_eq!(actual, expected);
