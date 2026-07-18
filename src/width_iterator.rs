@@ -188,20 +188,20 @@ mod tests {
     #[test]
     fn ansi_variations() {
         let tests = vec![
-            // CSI: Colors and Cursor
+            // CSI: Colors and Cursor.
             ("\x1b[31mRed Text\x1b[0m", "Red Text"),
             ("\x1b[1;1HHome Position", "Home Position"),
-            // Fe: Reset and Cursor Save
+            // Fe: Reset and Cursor Save.
             ("\x1bcReset", "Reset"),
             ("\x1b7Saved", "Saved"),
-            // OSC: Title and Hyperlinks
+            // OSC: Title and Hyperlinks.
             ("\x1b]0;Title\x07Visible", "Visible"),
             ("\x1b]8;;http://google.com\x1b\\Link\x1b]8;;\x1b\\", "Link"),
-            // DCS/APC/PM: Advanced protocols
+            // DCS/APC/PM: Advanced protocols.
             ("\x1BPqSixelData\x1b\\Clean", "Clean"),
             ("\x1B_Graphics\x1b\\Clean", "Clean"),
             ("\x1B^Privacy\x1b\\Clean", "Clean"),
-            // Mixed
+            // Mixed.
             ("\x1b[31m\x1b]0;Title\x07\x1b[2JSuccess", "Success"),
         ];
         let mut uw = UnicodeWidth::new();

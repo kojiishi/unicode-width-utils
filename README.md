@@ -133,6 +133,8 @@ fn main() {
 
 ### Line Wrapping
 
+[`lines()`] can create an iterator of multiple lines by wrapping a string.
+
 ```rust
 use unicode_width_utils::UnicodeWidth;
 
@@ -146,11 +148,14 @@ fn main() {
 ```
 
 Please see the [documentation][docs] for more details,
-and [releases] for the change history.
+[releases] for the change history,
+or [file issues][issues] if any.
 
 ## License
 
 Licensed under the Apache License, Version 2.0.
 
+[issues]: https://github.com/kojiishi/unicode-width-utils/issues
+[`lines()`]: https://docs.rs/unicode-width-utils/latest/unicode_width_utils/struct.UnicodeWidth.html#method.lines
 [releases]: https://github.com/kojiishi/unicode-width-utils/releases
 [`unicode-width` crate]: https://crates.io/crates/unicode-width
