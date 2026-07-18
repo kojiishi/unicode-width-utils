@@ -18,8 +18,8 @@ safe string truncation.
 ## Features
 
 - **Configuration Object**: Provides a configuration object
-  that is easy to pass around
-  for various different needs.
+  that supports various different needs, and
+  that is easy to pass around.
   - The tab size and whether to expand them to spaces or not.
   - The size of control characters.
   - Whether to make ANSI escape sequences zero-width or not.
@@ -66,11 +66,11 @@ along with whether to convert them to spaces or not.
 use unicode_width_utils::UnicodeWidth;
 
 fn main() {
-    // Treat ambiguous characters as 1 column wide.
-    let mut uw = UnicodeWidth::with_cjk(false);
-    assert_eq!(uw.str("A\tB"), 3);
+    let mut uw = UnicodeWidth::new();
+    assert_eq!(uw.str("A\tBC"), 4);
     uw.set_tab_size(4);
-    assert_eq!(uw.str("A\tB"), 5);
+    assert_eq!(uw.str("A\tBC"), 6);
+    assert_eq!(uw.truncate("A\tBC", 5), "A\tB");
     uw.set_expand_tab(true);
     assert_eq!(uw.truncate("A\tBC", 5), "A   B");
 }
@@ -84,8 +84,7 @@ You can configure whether to make ANSI escape sequences zero-width or not.
 use unicode_width_utils::UnicodeWidth;
 
 fn main() {
-    // Treat ambiguous characters as 1 column wide.
-    let mut uw = UnicodeWidth::with_cjk(false);
+    let mut uw = UnicodeWidth::new();
     let input = "A\x1B[31mZZ";
     assert_eq!(uw.str(input), 8);
     uw.set_ansi(true);
