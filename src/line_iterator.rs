@@ -38,6 +38,24 @@ impl<'a, 'b> LineIterator<'a, 'b> {
             max_width,
         }
     }
+
+    /// Return the rest of the string.
+    ///
+    /// # Examples
+    /// ```
+    /// use unicode_width_utils::UnicodeWidth;
+    ///
+    /// let uw = UnicodeWidth::new();
+    /// let mut iter = uw.lines("12345", 3);
+    /// assert_eq!(iter.rest(), "12345");
+    /// assert_eq!(iter.next().unwrap(), "123");
+    /// assert_eq!(iter.rest(), "45");
+    /// assert_eq!(iter.next().unwrap(), "45");
+    /// assert_eq!(iter.rest(), "");
+    /// ```
+    pub fn rest(&self) -> &'b str {
+        self.input
+    }
 }
 
 impl<'a, 'b> Iterator for LineIterator<'a, 'b> {
@@ -64,13 +82,17 @@ mod tests {
     #[test]
     fn no_tabs() {
         let uw = UnicodeWidth::new();
-        let input = "hello world rust";
+        let input = "hello world";
         let mut iter = LineIterator::new(&uw, input, 5);
+        assert_eq!(iter.rest(), "hello world");
         assert_eq!(iter.next(), Some(Cow::Borrowed("hello")));
+        assert_eq!(iter.rest(), " world");
         assert_eq!(iter.next(), Some(Cow::Borrowed(" worl")));
-        assert_eq!(iter.next(), Some(Cow::Borrowed("d rus")));
-        assert_eq!(iter.next(), Some(Cow::Borrowed("t")));
+        assert_eq!(iter.rest(), "d");
+        assert_eq!(iter.next(), Some(Cow::Borrowed("d")));
+        assert_eq!(iter.rest(), "");
         assert_eq!(iter.next(), None);
+        assert_eq!(iter.rest(), "");
     }
 
     #[test]
