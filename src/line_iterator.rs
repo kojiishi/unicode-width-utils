@@ -53,6 +53,7 @@ impl<'a, 'b> LineIterator<'a, 'b> {
     /// assert_eq!(iter.next().unwrap(), "45");
     /// assert_eq!(iter.rest(), "");
     /// ```
+    #[inline]
     pub fn rest(&self) -> &'b str {
         self.input
     }
