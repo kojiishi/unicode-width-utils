@@ -2,7 +2,7 @@
 name = "unicode-width-utils"
 version = "0.2.6"
 edition = "2024"
-description = "A thin-wrapper for the `unicode-width` crate with additional functionalities"
+description = "Line wrapping and truncation by using `unicode-width`"
 authors = ["Koji Ishii <kojiishi@gmail.com>"]
 license = "Apache-2.0"
 repository = "https://github.com/kojiishi/unicode-width-utils"

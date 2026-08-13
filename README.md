@@ -12,8 +12,7 @@
 # unicode-width-utils
 
 A thin-wrapper for the [`unicode-width` crate] with additional functionalities,
-such as dynamic configuration for CJK (East Asian Ambiguous) widths and
-safe string truncation.
+such as line wrapping and truncation.
 
 ## Features
 
