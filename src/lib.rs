@@ -33,7 +33,9 @@
 mod line_iterator;
 mod unicode_width_utils;
 mod width_iterator;
+mod width_source;
 
 pub use line_iterator::LineIterator;
 pub use unicode_width_utils::UnicodeWidth;
 pub(crate) use width_iterator::WidthIterator;
+pub(crate) use width_source::WidthSource;
