@@ -47,15 +47,21 @@ impl<'a, 'b> LineIterator<'a, 'b> {
     ///
     /// let uw = UnicodeWidth::new();
     /// let mut iter = uw.lines("12345", 3);
-    /// assert_eq!(iter.rest(), "12345");
+    /// assert_eq!(iter.as_str(), "12345");
     /// assert_eq!(iter.next().unwrap(), "123");
-    /// assert_eq!(iter.rest(), "45");
+    /// assert_eq!(iter.as_str(), "45");
     /// assert_eq!(iter.next().unwrap(), "45");
-    /// assert_eq!(iter.rest(), "");
+    /// assert_eq!(iter.as_str(), "");
     /// ```
     #[inline]
-    pub fn rest(&self) -> &'b str {
+    pub fn as_str(&self) -> &'b str {
         self.input
+    }
+
+    #[deprecated(since = "0.2.6", note = "use `as_str` instead")]
+    #[inline]
+    pub fn rest(&self) -> &'b str {
+        self.as_str()
     }
 }
 
@@ -85,15 +91,15 @@ mod tests {
         let uw = UnicodeWidth::new();
         let input = "hello world";
         let mut iter = LineIterator::new(&uw, input, 5);
-        assert_eq!(iter.rest(), "hello world");
+        assert_eq!(iter.as_str(), "hello world");
         assert_eq!(iter.next(), Some(Cow::Borrowed("hello")));
-        assert_eq!(iter.rest(), " world");
+        assert_eq!(iter.as_str(), " world");
         assert_eq!(iter.next(), Some(Cow::Borrowed(" worl")));
-        assert_eq!(iter.rest(), "d");
+        assert_eq!(iter.as_str(), "d");
         assert_eq!(iter.next(), Some(Cow::Borrowed("d")));
-        assert_eq!(iter.rest(), "");
+        assert_eq!(iter.as_str(), "");
         assert_eq!(iter.next(), None);
-        assert_eq!(iter.rest(), "");
+        assert_eq!(iter.as_str(), "");
     }
 
     #[test]
