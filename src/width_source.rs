@@ -1,6 +1,10 @@
+#[cfg(feature = "ansi")]
 use regex::Regex;
-use std::{str::CharIndices, sync::LazyLock};
+use std::str::CharIndices;
+#[cfg(feature = "ansi")]
+use std::sync::LazyLock;
 
+#[cfg(feature = "ansi")]
 static RE_ANSI: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(concat!(
         r"^(?:",
@@ -23,14 +27,16 @@ static RE_ANSI: LazyLock<Regex> = LazyLock::new(|| {
 pub(crate) struct WidthSource<'a> {
     input_str: &'a str,
     input_chars: CharIndices<'a>,
+    #[cfg(feature = "ansi")]
     is_ansi: bool,
 }
 
 impl<'a> WidthSource<'a> {
-    pub(crate) fn new(input_str: &'a str, is_ansi: bool) -> Self {
+    pub(crate) fn new(input_str: &'a str, #[cfg(feature = "ansi")] is_ansi: bool) -> Self {
         Self {
             input_str,
             input_chars: input_str.char_indices(),
+            #[cfg(feature = "ansi")]
             is_ansi,
         }
     }
@@ -50,7 +56,11 @@ impl<'a> Iterator for WidthSource<'a> {
     type Item = (usize, char);
 
     fn next(&mut self) -> Option<Self::Item> {
+        #[cfg(feature = "ansi")]
         let (mut index, mut ch) = self.input_chars.next()?;
+        #[cfg(not(feature = "ansi"))]
+        let (index, ch) = self.input_chars.next()?;
+        #[cfg(feature = "ansi")]
         while ch == 0x1B as char
             && self.is_ansi
             && let Some(m) = RE_ANSI.find(&self.input_str[index + 1..])
@@ -64,7 +74,7 @@ impl<'a> Iterator for WidthSource<'a> {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "ansi"))]
 mod tests {
     use super::*;
 

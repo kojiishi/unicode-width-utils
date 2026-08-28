@@ -13,5 +13,13 @@ categories = ["internationalization", "text-processing"]
 exclude = [".github", ".gitignore", ".vscode", "Taskfile.yml"]
 
 [dependencies]
-regex = "1.13.1"
+regex = { version = "1.13.1", optional = true }
 unicode-width = "0.2.2"
+
+[features]
+default = ["ansi"]
+ansi = ["dep:regex"]
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]

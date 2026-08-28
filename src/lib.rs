@@ -29,6 +29,7 @@
 //! ```
 //!
 //! [`unicode-width` crate]: https://crates.io/crates/unicode-width
+#![cfg_attr(docsrs, feature(doc_cfg))]
 
 mod line_iterator;
 mod unicode_width_utils;
