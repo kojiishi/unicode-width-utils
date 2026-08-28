@@ -55,7 +55,7 @@ tasks:
 
 vars:
   CLIPPY: '-- -Dwarnings'
-  DOC: --no-deps --workspace --document-private-items
+  DOC: --no-deps --workspace
   FEATURE: ''
   FEATURES: ['']
   FMT: '--all'
