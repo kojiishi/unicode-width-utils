@@ -27,7 +27,11 @@ impl<'a, 'b> WidthIterator<'a, 'b> {
     pub(crate) fn new(uw: &'a UnicodeWidth, input: &'b str) -> Self {
         Self {
             uw,
-            source: WidthSource::new(input, uw.is_ansi),
+            source: WidthSource::new(
+                input,
+                #[cfg(feature = "ansi")]
+                uw.is_ansi,
+            ),
             width: 0,
             max_width: usize::MAX,
             input_end_index: None,

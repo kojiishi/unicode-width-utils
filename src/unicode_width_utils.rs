@@ -29,6 +29,7 @@ static IS_CJK: LazyLock<AtomicBool> = LazyLock::new(|| {
 #[derive(Clone, Debug)]
 pub struct UnicodeWidth {
     is_cjk: bool,
+    #[cfg(feature = "ansi")]
     pub(crate) is_ansi: bool,
     pub(crate) should_expand_tab: bool,
     pub(crate) tab_size: u8,
@@ -39,6 +40,7 @@ impl Default for UnicodeWidth {
     fn default() -> Self {
         Self {
             is_cjk: IS_CJK.load(Ordering::Relaxed),
+            #[cfg(feature = "ansi")]
             is_ansi: false,
             should_expand_tab: false,
             tab_size: 0,
@@ -157,6 +159,7 @@ impl UnicodeWidth {
     /// assert_eq!(uw.str(input), 3);
     /// assert_eq!(uw.truncate(input, 2), Cow::Borrowed("A\x1B[31mZ"));
     /// ```
+    #[cfg(feature = "ansi")]
     #[inline]
     pub fn set_ansi(&mut self, is_ansi: bool) {
         self.is_ansi = is_ansi;
@@ -311,7 +314,12 @@ impl UnicodeWidth {
     /// assert_eq!(uw.str("Hello\t"), 8);
     /// ```
     pub fn str(&self, str: &str) -> usize {
-        if self.tab_size > 0 || self.is_ansi {
+        #[cfg(feature = "ansi")]
+        let is_ansi = self.is_ansi;
+        #[cfg(not(feature = "ansi"))]
+        let is_ansi = false;
+
+        if self.tab_size > 0 || is_ansi {
             let mut iter = WidthIterator::new(self, str);
             iter.consume_all();
             return iter.width();
@@ -490,6 +498,7 @@ mod tests {
         assert_eq!(lines, vec!["hi  worl", "d rust"]);
     }
 
+    #[cfg(feature = "ansi")]
     #[test]
     fn ansi_tabs() {
         let mut uw = UnicodeWidth::new();
