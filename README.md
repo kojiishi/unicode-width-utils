@@ -16,29 +16,20 @@ such as line wrapping and truncation.
 
 ## Features
 
-- **Configuration Object**: Provides a configuration object
-  that supports various different needs, and
-  that is easy to pass around.
-  - The tab size and whether to expand them to spaces or not.
-  - The size of control characters.
-  - Whether to make ANSI escape sequences zero-width or not
+- **Configurations**: Provides various configurations,
+  stored in a lightweight configuration object that is easy to pass around.
+  - The **tab size** and whether to expand them to spaces or not.
+  - The **size of control characters**.
+  - Treat **ANSI escape sequences** zero-width
     (requires the optional `ansi` feature).
-  - Whether to use alternate width calculation
-    more suited for CJK contexts or not.
-    It controls East Asian Ambiguous characters
-    (such as Greek, Cyrillic, and some symbol characters)
-    to be 1 or 2 columns wide.
-  - Also support the `UNICODE_WIDTH=cjk` environment variable
-    to initialize the default CJK mode.
-    This enables end users in CJK contexts
-    to change the default mode to match their environments.
+  - Use alternate width calculation more **suited for CJK contexts**.
 - **Safe Truncation**: Truncate strings to a specific column width
   without breaking UTF-8 characters,
   including optional tab support.
+- **Line Wrapping**: Wrap strings to multiple lines at a specific column.
 - **Unicode Segmentation**: Truncate and wrap strings
   only at Unicode grapheme cluster boundaries
   (requires the optional `segment` feature).
-- **Line Wrapping**: Wrap strings to multiple lines at a specific column.
 
 ## Installation
 ```bash
@@ -139,7 +130,7 @@ fn main() {
 ### CJK Ambiguous Widths
 
 You can explicitly configure whether East Asian Ambiguous characters are treated
-as 1 or 2 columns wide:
+as 1 or 2 columns wide.
 ```rust
 use unicode_width_utils::UnicodeWidth;
 
@@ -154,9 +145,14 @@ fn main() {
 }
 ```
 
+> [!NOTE]
+> The default setting is `false` for `new()` and `default()`,
+> but setting the environment variable `UNICODE_WIDTH=cjk` turns it to `true`.
+
 ### String Truncation
 
-Truncate a string slice so that its total display width does not exceed a maximum limit:
+Truncate a string slice so that its total display width does not exceed a
+maximum limit.
 
 ```rust
 use unicode_width_utils::UnicodeWidth;
