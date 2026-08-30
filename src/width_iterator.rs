@@ -11,6 +11,10 @@ pub(crate) struct WidthIterator<'a, 'b> {
     output: Option<String>,
     include_at_least_one: bool,
     last_copied_index: usize,
+    #[cfg(feature = "segment")]
+    last_boundary_index: usize,
+    #[cfg(feature = "segment")]
+    last_boundary_width: usize,
 }
 
 impl<'a, 'b> From<WidthIterator<'a, 'b>> for Cow<'b, str> {
@@ -25,19 +29,24 @@ impl<'a, 'b> From<WidthIterator<'a, 'b>> for Cow<'b, str> {
 
 impl<'a, 'b> WidthIterator<'a, 'b> {
     pub(crate) fn new(uw: &'a UnicodeWidth, input: &'b str) -> Self {
+        #[allow(unused_mut)]
+        let mut source = WidthSource::new(input);
+        #[cfg(feature = "ansi")]
+        source.set_ansi(uw.is_ansi);
+
         Self {
             uw,
-            source: WidthSource::new(
-                input,
-                #[cfg(feature = "ansi")]
-                uw.is_ansi,
-            ),
+            source,
             width: 0,
             max_width: usize::MAX,
             input_end_index: None,
             output: None,
             include_at_least_one: false,
             last_copied_index: 0,
+            #[cfg(feature = "segment")]
+            last_boundary_index: 0,
+            #[cfg(feature = "segment")]
+            last_boundary_width: 0,
         }
     }
 
@@ -77,10 +86,19 @@ impl<'a, 'b> Iterator for WidthIterator<'a, 'b> {
     type Item = (char, usize);
 
     fn next(&mut self) -> Option<Self::Item> {
-        let Some((index, ch)) = self.source.next() else {
+        let Some((index, ch, is_boundary)) = self.source.next() else {
             self.set_input_end_index(self.source.len());
             return None;
         };
+
+        #[cfg(feature = "segment")]
+        if is_boundary {
+            self.last_boundary_index = index;
+            self.last_boundary_width = self.width;
+        }
+        #[cfg(not(feature = "segment"))]
+        let _ = is_boundary;
+
         let ch_width = if let Some(ch_width) = self.uw.char_opt(ch) {
             ch_width
         } else if ch == '\t' && self.uw.tab_size > 0 {
@@ -95,11 +113,30 @@ impl<'a, 'b> Iterator for WidthIterator<'a, 'b> {
         };
         let new_width = self.width + ch_width;
         if new_width > self.max_width {
-            if index == 0 && self.include_at_least_one {
-                // Bypass maximum width check for the first character.
+            let skip_max_width = if self.include_at_least_one {
+                #[cfg(feature = "segment")]
+                {
+                    self.last_boundary_index == 0
+                }
+                #[cfg(not(feature = "segment"))]
+                {
+                    index == 0
+                }
             } else {
-                self.set_input_end_index(index);
-                return None;
+                false
+            };
+            if !skip_max_width {
+                #[cfg(feature = "segment")]
+                {
+                    self.width = self.last_boundary_width;
+                    self.set_input_end_index(self.last_boundary_index);
+                    return None;
+                }
+                #[cfg(not(feature = "segment"))]
+                {
+                    self.set_input_end_index(index);
+                    return None;
+                }
             }
         }
         self.width = new_width;
@@ -135,5 +172,83 @@ mod tests {
         assert_eq!(iter.next(), Some(('B', 1)));
         assert_eq!(iter.width(), 5);
         assert_eq!(iter.next(), None);
+    }
+
+    #[cfg(feature = "segment")]
+    #[test]
+    fn segment() {
+        let uw = UnicodeWidth::new();
+        // Test combining characters "a\u{301}" (grapheme cluster of width 1).
+        // If max_width is 1: we consume 'a' and '\u{301}' successfully because
+        // the first grapheme boundary is at 0, next is at 3.
+        let mut iter = WidthIterator::new(&uw, "a\u{301}b");
+        iter.set_max_width(1);
+        assert_eq!(iter.next(), Some(('a', 1)));
+        assert_eq!(iter.next(), Some(('\u{301}', 0)));
+        assert_eq!(iter.next(), None);
+        assert_eq!(iter.width(), 1);
+        assert_eq!(iter.input_end_index, Some(3)); // ends before 'b'
+    }
+
+    #[cfg(feature = "segment")]
+    #[test]
+    fn segment_max0() {
+        let uw = UnicodeWidth::new();
+        // If max_width is 0: it doesn't fit, and we stop at 0 (empty).
+        let mut iter = WidthIterator::new(&uw, "a\u{301}b");
+        iter.set_max_width(0);
+        assert_eq!(iter.next(), None);
+        assert_eq!(iter.width(), 0);
+        assert_eq!(iter.input_end_index, Some(0));
+
+        // If max_width is 0 but include_at_least_one is true:
+        // We must include the first grapheme cluster completely.
+        let mut iter = WidthIterator::new(&uw, "a\u{301}b");
+        iter.set_max_width(0);
+        iter.set_include_at_least_one(true);
+        assert_eq!(iter.next(), Some(('a', 1)));
+        assert_eq!(iter.next(), Some(('\u{301}', 0)));
+        assert_eq!(iter.next(), None);
+        assert_eq!(iter.width(), 1);
+        assert_eq!(iter.input_end_index, Some(3));
+    }
+
+    #[cfg(feature = "segment")]
+    #[test]
+    fn segment_regional_indicators() {
+        let uw = UnicodeWidth::new();
+        // Test "\u{1F1FA}\u{1F1F8}b" (regional indicators, each having width 1,
+        // total width 2).
+        // If max_width is 2: both fit.
+        let mut iter = WidthIterator::new(&uw, "\u{1F1FA}\u{1F1F8}b");
+        iter.set_max_width(2);
+        assert_eq!(iter.next(), Some(('\u{1F1FA}', 1)));
+        assert_eq!(iter.next(), Some(('\u{1F1F8}', 1)));
+        assert_eq!(iter.next(), None);
+        assert_eq!(iter.width(), 2);
+        assert_eq!(iter.input_end_index, Some(8));
+
+        // If max_width is 1: since regional indicator flag "\u{1F1FA}\u{1F1F8}"
+        // requires 2 width, and index 4 (between '\u{1F1FA}' and '\u{1F1F8}')
+        // is not a grapheme boundary, it must stop at 0 on the second next()
+        // call.
+        let mut iter = WidthIterator::new(&uw, "\u{1F1FA}\u{1F1F8}b");
+        iter.set_max_width(1);
+        assert_eq!(iter.next(), Some(('\u{1F1FA}', 1)));
+        assert_eq!(iter.next(), None);
+        assert_eq!(iter.width(), 0);
+        assert_eq!(iter.input_end_index, Some(0));
+
+        // If max_width is 1 and include_at_least_one is true:
+        // We must include the first grapheme cluster "\u{1F1FA}\u{1F1F8}"
+        // entirely even if it exceeds max_width.
+        let mut iter = WidthIterator::new(&uw, "\u{1F1FA}\u{1F1F8}b");
+        iter.set_max_width(1);
+        iter.set_include_at_least_one(true);
+        assert_eq!(iter.next(), Some(('\u{1F1FA}', 1)));
+        assert_eq!(iter.next(), Some(('\u{1F1F8}', 1)));
+        assert_eq!(iter.next(), None);
+        assert_eq!(iter.width(), 2);
+        assert_eq!(iter.input_end_index, Some(8));
     }
 }

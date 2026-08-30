@@ -32,6 +32,9 @@
 //!
 //! * `ansi`: Enables support for making ANSI escape sequences zero-width.
 //!   This feature is optional and disabled by default.
+//! * `segment`: Enables support for truncating and wrapping lines only at
+//!   Unicode grapheme boundaries.
+//!   This feature is optional and disabled by default.
 //!
 //! [`unicode-width` crate]: https://crates.io/crates/unicode-width
 #![cfg_attr(docsrs, feature(doc_cfg))]

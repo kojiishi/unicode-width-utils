@@ -35,6 +35,9 @@ such as line wrapping and truncation.
 - **Safe Truncation**: Truncate strings to a specific column width
   without breaking UTF-8 characters,
   including optional tab support.
+- **Unicode Segmentation**: Truncate and wrap strings
+  only at Unicode grapheme cluster boundaries
+  (requires the optional `segment` feature).
 - **Line Wrapping**: Wrap strings to multiple lines at a specific column.
 
 ## Installation
@@ -49,6 +52,13 @@ cargo add unicode-width-utils
   To enable it, add the feature:
   ```shell
   cargo add unicode-width-utils --features ansi
+  ```
+- `segment`: Enables support for truncating and wrapping lines
+  only at Unicode grapheme boundaries.
+  This feature is optional and disabled by default.
+  To enable it, add the feature:
+  ```shell
+  cargo add unicode-width-utils --features segment
   ```
 
 ## Usage
@@ -102,6 +112,27 @@ fn main() {
     uw.set_ansi(true);
     assert_eq!(uw.str(input), 3);
     assert_eq!(uw.truncate(input, 2), Cow::Borrowed("A\x1B[31mZ"));
+}
+```
+
+### Unicode Grapheme Segmentation
+
+When the `segment` feature is enabled,
+line truncation and wrapping will always occur
+only at Unicode grapheme boundaries.
+
+> [!NOTE]
+> This requires the `segment` feature to be enabled.
+
+```rust
+use unicode_width_utils::UnicodeWidth;
+
+fn main() {
+    let uw = UnicodeWidth::new();
+    // "a\u{301}" is a single grapheme cluster (a with combining acute accent) of width 1.
+    // It cannot be truncated to width 0 without breaking the grapheme cluster.
+    assert_eq!(uw.truncate("a\u{301}b", 1), "a\u{301}");
+    assert_eq!(uw.truncate("a\u{301}b", 0), "");
 }
 ```
 

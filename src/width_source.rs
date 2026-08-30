@@ -29,16 +29,38 @@ pub(crate) struct WidthSource<'a> {
     input_chars: CharIndices<'a>,
     #[cfg(feature = "ansi")]
     is_ansi: bool,
+    #[cfg(feature = "segment")]
+    grapheme_iterator: unicode_segmentation::GraphemeIndices<'a>,
+    #[cfg(feature = "segment")]
+    next_grapheme_boundary: Option<usize>,
 }
 
 impl<'a> WidthSource<'a> {
-    pub(crate) fn new(input_str: &'a str, #[cfg(feature = "ansi")] is_ansi: bool) -> Self {
+    pub(crate) fn new(input_str: &'a str) -> Self {
+        #[cfg(feature = "segment")]
+        let (grapheme_iterator, next_grapheme_boundary) = {
+            use unicode_segmentation::UnicodeSegmentation;
+            let mut iter = input_str.grapheme_indices(true);
+            let next_boundary = iter.next().map(|(i, _)| i);
+            (iter, next_boundary)
+        };
+
         Self {
             input_str,
             input_chars: input_str.char_indices(),
             #[cfg(feature = "ansi")]
-            is_ansi,
+            is_ansi: false,
+            #[cfg(feature = "segment")]
+            grapheme_iterator,
+            #[cfg(feature = "segment")]
+            next_grapheme_boundary,
         }
+    }
+
+    #[cfg(feature = "ansi")]
+    #[inline]
+    pub(crate) fn set_ansi(&mut self, is_ansi: bool) {
+        self.is_ansi = is_ansi;
     }
 
     #[inline]
@@ -53,7 +75,7 @@ impl<'a> WidthSource<'a> {
 }
 
 impl<'a> Iterator for WidthSource<'a> {
-    type Item = (usize, char);
+    type Item = (usize, char, bool);
 
     fn next(&mut self) -> Option<Self::Item> {
         #[cfg(feature = "ansi")]
@@ -70,38 +92,66 @@ impl<'a> Iterator for WidthSource<'a> {
             }
             (index, ch) = self.input_chars.next()?;
         }
-        Some((index, ch))
+
+        #[cfg(feature = "segment")]
+        let is_boundary = {
+            while let Some(boundary) = self.next_grapheme_boundary
+                && boundary < index
+            {
+                self.next_grapheme_boundary = self.grapheme_iterator.next().map(|(i, _)| i);
+            }
+            self.next_grapheme_boundary == Some(index)
+        };
+        #[cfg(not(feature = "segment"))]
+        let is_boundary = true;
+
+        Some((index, ch, is_boundary))
     }
 }
 
-#[cfg(all(test, feature = "ansi"))]
+#[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn ansi_next() {
-        let mut source = WidthSource::new("A\x1B[31mZ", true);
-        assert_eq!(source.next(), Some((0, 'A')));
-        assert_eq!(source.next(), Some((6, 'Z')));
-        assert_eq!(source.next(), None);
-
-        let mut source = WidthSource::new("A\x1BDZ", true);
-        assert_eq!(source.next(), Some((0, 'A')));
-        assert_eq!(source.next(), Some((3, 'Z')));
+    fn next() {
+        let mut source = WidthSource::new("AZ");
+        assert_eq!(source.next(), Some((0, 'A', true)));
+        assert_eq!(source.next(), Some((1, 'Z', true)));
         assert_eq!(source.next(), None);
     }
 
+    #[cfg(feature = "ansi")]
+    #[test]
+    fn ansi_next() {
+        let mut source = WidthSource::new("A\x1B[31mZ");
+        source.set_ansi(true);
+        assert_eq!(source.next(), Some((0, 'A', true)));
+        assert_eq!(source.next(), Some((6, 'Z', true)));
+        assert_eq!(source.next(), None);
+
+        let mut source = WidthSource::new("A\x1BDZ");
+        source.set_ansi(true);
+        assert_eq!(source.next(), Some((0, 'A', true)));
+        assert_eq!(source.next(), Some((3, 'Z', true)));
+        assert_eq!(source.next(), None);
+    }
+
+    #[cfg(feature = "ansi")]
     #[test]
     fn ansi_next_at_start_end() {
-        let mut source = WidthSource::new("\x1B[31mZ", true);
-        assert_eq!(source.next(), Some((5, 'Z')));
+        let mut source = WidthSource::new("\x1B[31mZ");
+        source.set_ansi(true);
+        assert_eq!(source.next(), Some((5, 'Z', true)));
         assert_eq!(source.next(), None);
 
-        let mut source = WidthSource::new("\t\x1B[31m", true);
-        assert_eq!(source.next(), Some((0, '\t')));
+        let mut source = WidthSource::new("\t\x1B[31m");
+        source.set_ansi(true);
+        assert_eq!(source.next(), Some((0, '\t', true)));
         assert_eq!(source.next(), None);
     }
 
+    #[cfg(feature = "ansi")]
     #[test]
     fn ansi_variations() {
         let tests = vec![
@@ -122,12 +172,39 @@ mod tests {
             ("\x1b[31m\x1b]0;Title\x07\x1b[2JSuccess", "Success"),
         ];
         for (input, expected) in tests {
-            let source = WidthSource::new(input, true);
+            let mut source = WidthSource::new(input);
+            source.set_ansi(true);
             let mut actual = String::new();
-            for (_, ch) in source {
+            for (_, ch, _) in source {
                 actual.push(ch);
             }
             assert_eq!(actual, expected);
         }
+    }
+
+    #[cfg(feature = "segment")]
+    #[test]
+    fn segment_boundaries() {
+        // "a\u{301}" is a single grapheme cluster (a with combining acute
+        // accent).
+        // 'a' starts at index 0 and is a boundary.
+        // '\u{301}' starts at index 1 and is NOT a boundary.
+        // 'b' starts at index 3 and is a boundary.
+        let mut source = WidthSource::new("a\u{301}b");
+        assert_eq!(source.next(), Some((0, 'a', true)));
+        assert_eq!(source.next(), Some((1, '\u{301}', false)));
+        assert_eq!(source.next(), Some((3, 'b', true)));
+        assert_eq!(source.next(), None);
+
+        // "\u{1F1FA}\u{1F1F8}" is a single grapheme cluster consisting of
+        // U+1F1FA ('\u{1F1FA}') and U+1F1F8 ('\u{1F1F8}').
+        // '\u{1F1FA}' starts at index 0 and is a boundary.
+        // '\u{1F1F8}' starts at index 4 and is NOT a boundary.
+        // 'b' starts at index 8 and is a boundary.
+        let mut source = WidthSource::new("\u{1F1FA}\u{1F1F8}b");
+        assert_eq!(source.next(), Some((0, '\u{1F1FA}', true)));
+        assert_eq!(source.next(), Some((4, '\u{1F1F8}', false)));
+        assert_eq!(source.next(), Some((8, 'b', true)));
+        assert_eq!(source.next(), None);
     }
 }
