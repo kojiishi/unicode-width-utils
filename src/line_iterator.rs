@@ -136,4 +136,32 @@ mod tests {
         assert_eq!(iter.next(), Some(Cow::Borrowed("A")));
         assert_eq!(iter.next(), None);
     }
+
+    #[cfg(feature = "segment")]
+    #[test]
+    fn segment_boundary() {
+        let uw = UnicodeWidth::new();
+
+        // "a\u{301}" is a single grapheme cluster of width 1.
+        // With max_width = 1, it fits, so we wrap after it.
+        let mut iter = LineIterator::new(&uw, "a\u{301}b", 1);
+        assert_eq!(iter.next(), Some(Cow::Borrowed("a\u{301}")));
+        assert_eq!(iter.next(), Some(Cow::Borrowed("b")));
+        assert_eq!(iter.next(), None);
+
+        // If max_width = 0: since it's the first grapheme, include_at_least_one is true.
+        // It must not split the grapheme cluster. So the first line is "a\u{301}".
+        let mut iter = LineIterator::new(&uw, "a\u{301}b", 0);
+        assert_eq!(iter.next(), Some(Cow::Borrowed("a\u{301}")));
+        assert_eq!(iter.next(), Some(Cow::Borrowed("b")));
+        assert_eq!(iter.next(), None);
+
+        // "\r\n" is a single grapheme cluster of width 2 (each control char width 1).
+        // With max_width = 1: since it's the first grapheme, include_at_least_one is true.
+        // It must not split, so the first line is "\r\n".
+        let mut iter = LineIterator::new(&uw, "\r\nB", 1);
+        assert_eq!(iter.next(), Some(Cow::Borrowed("\r\n")));
+        assert_eq!(iter.next(), Some(Cow::Borrowed("B")));
+        assert_eq!(iter.next(), None);
+    }
 }

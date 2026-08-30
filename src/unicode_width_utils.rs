@@ -519,4 +519,20 @@ mod tests {
             Cow::Owned::<str>("A   A\x1B[31mZ".to_string())
         );
     }
+
+    #[cfg(feature = "segment")]
+    #[test]
+    fn segment_truncate() {
+        let uw = UnicodeWidth::new();
+
+        // "a\u{301}" is a single grapheme cluster (a with combining acute accent) of width 1.
+        assert_eq!(uw.truncate("a\u{301}b", 0), Cow::Borrowed(""));
+        assert_eq!(uw.truncate("a\u{301}b", 1), Cow::Borrowed("a\u{301}"));
+        assert_eq!(uw.truncate("a\u{301}b", 2), Cow::Borrowed("a\u{301}b"));
+
+        // "\r\n" is a single grapheme cluster of width 2 (each control char having width 1 by default).
+        assert_eq!(uw.truncate("\r\n", 0), Cow::Borrowed(""));
+        assert_eq!(uw.truncate("\r\n", 1), Cow::Borrowed(""));
+        assert_eq!(uw.truncate("\r\n", 2), Cow::Borrowed("\r\n"));
+    }
 }
