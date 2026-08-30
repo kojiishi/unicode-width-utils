@@ -21,7 +21,8 @@ such as line wrapping and truncation.
   that is easy to pass around.
   - The tab size and whether to expand them to spaces or not.
   - The size of control characters.
-  - Whether to make ANSI escape sequences zero-width or not.
+  - Whether to make ANSI escape sequences zero-width or not
+    (requires the optional `ansi` feature).
   - Whether to use alternate width calculation
     more suited for CJK contexts or not.
     It controls East Asian Ambiguous characters
@@ -40,6 +41,15 @@ such as line wrapping and truncation.
 ```bash
 cargo add unicode-width-utils
 ```
+
+### Cargo Features
+
+- `ansi`: Enables support for making ANSI escape sequences zero-width.
+  This feature is optional and disabled by default.
+  To enable it, add the feature:
+  ```shell
+  cargo add unicode-width-utils --features ansi
+  ```
 
 ## Usage
 
@@ -78,6 +88,9 @@ fn main() {
 ### ANSI Escape Sequences
 
 You can configure whether to make ANSI escape sequences zero-width or not.
+
+> [!NOTE]
+> This requires the `ansi` feature to be enabled.
 
 ```rust
 use unicode_width_utils::UnicodeWidth;

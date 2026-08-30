@@ -28,6 +28,11 @@
 //! assert_eq!(truncated, "A");
 //! ```
 //!
+//! # Cargo Features
+//!
+//! * `ansi`: Enables support for making ANSI escape sequences zero-width.
+//!   This feature is optional and disabled by default.
+//!
 //! [`unicode-width` crate]: https://crates.io/crates/unicode-width
 #![cfg_attr(docsrs, feature(doc_cfg))]
 

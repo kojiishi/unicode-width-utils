@@ -291,13 +291,13 @@ impl UnicodeWidth {
     /// It calls `width` or `width_cjk` depending on the configuration,
     /// unless the [tab size][`set_tab_size()`],
     /// the [control character size][`set_control_size()`],
-    /// or the [ANSI sequence][`set_ansi()`] is set,
+    /// or the [ANSI sequence][set_ansi] is set,
     /// in which cases the internal logic computes the width
     /// by calling [`char()`] or [`char_opt()`] repeatedly.
     ///
     /// [`char()`]: UnicodeWidth::char
     /// [`char_opt()`]: UnicodeWidth::char_opt
-    /// [`set_ansi()`]: UnicodeWidth::set_ansi
+    /// [set_ansi]: struct.UnicodeWidth.html#method.set_ansi
     /// [`set_control_size()`]: UnicodeWidth::set_control_size
     /// [`set_tab_size()`]: UnicodeWidth::set_tab_size
     /// [`truncate()`]: UnicodeWidth::truncate
