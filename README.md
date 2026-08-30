@@ -119,11 +119,14 @@ only at Unicode grapheme boundaries.
 use unicode_width_utils::UnicodeWidth;
 
 fn main() {
+    // A regional indicator "\u{1F1FA}\u{1F1F8}" is a single grapheme
+    // cluster of width 2, each having width 1.
     let uw = UnicodeWidth::new();
-    // "a\u{301}" is a single grapheme cluster (a with combining acute accent) of width 1.
-    // It cannot be truncated to width 0 without breaking the grapheme cluster.
-    assert_eq!(uw.truncate("a\u{301}b", 1), "a\u{301}");
-    assert_eq!(uw.truncate("a\u{301}b", 0), "");
+    #[cfg(feature = "segment")]
+    assert_eq!(uw.truncate("\u{1F1FA}\u{1F1F8}b", 1), "");
+    #[cfg(not(feature = "segment"))]
+    assert_eq!(uw.truncate("\u{1F1FA}\u{1F1F8}b", 1), "\u{1F1FA}");
+    assert_eq!(uw.truncate("\u{1F1FA}\u{1F1F8}b", 2), "\u{1F1FA}\u{1F1F8}");
 }
 ```
 
