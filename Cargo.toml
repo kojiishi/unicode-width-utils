@@ -1,6 +1,6 @@
 [package]
 name = "unicode-width-utils"
-version = "0.2.7"
+version = "0.3.0"
 edition = "2024"
 description = "Line wrapping and truncation by using `unicode-width`"
 authors = ["Koji Ishii <kojiishi@gmail.com>"]
@@ -17,7 +17,7 @@ regex = { version = "1.13.1", optional = true }
 unicode-width = "0.2.2"
 
 [features]
-default = ["ansi"]
+default = []
 ansi = ["dep:regex"]
 
 [package.metadata.docs.rs]
