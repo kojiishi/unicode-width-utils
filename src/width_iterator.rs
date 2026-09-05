@@ -65,6 +65,24 @@ impl<'a, 'b> WidthIterator<'a, 'b> {
         self.include_at_least_one = include;
     }
 
+    #[inline]
+    fn should_stop_before(&self, new_width: usize, _index: usize) -> bool {
+        if new_width <= self.max_width {
+            return false;
+        }
+        if self.include_at_least_one {
+            #[cfg(feature = "segment")]
+            {
+                return self.last_boundary_index != 0;
+            }
+            #[cfg(not(feature = "segment"))]
+            {
+                return _index != 0;
+            }
+        }
+        true
+    }
+
     pub(crate) fn consume_all(&mut self) {
         for _ in self.by_ref() {}
         assert!(self.input_end_index.is_some());
@@ -112,31 +130,17 @@ impl<'a, 'b> Iterator for WidthIterator<'a, 'b> {
             self.uw.control_size as usize
         };
         let new_width = self.width + ch_width;
-        if new_width > self.max_width {
-            let skip_max_width = if self.include_at_least_one {
-                #[cfg(feature = "segment")]
-                {
-                    self.last_boundary_index == 0
-                }
-                #[cfg(not(feature = "segment"))]
-                {
-                    index == 0
-                }
-            } else {
-                false
-            };
-            if !skip_max_width {
-                #[cfg(feature = "segment")]
-                {
-                    self.width = self.last_boundary_width;
-                    self.set_input_end_index(self.last_boundary_index);
-                    return None;
-                }
-                #[cfg(not(feature = "segment"))]
-                {
-                    self.set_input_end_index(index);
-                    return None;
-                }
+        if self.should_stop_before(new_width, index) {
+            #[cfg(feature = "segment")]
+            {
+                self.width = self.last_boundary_width;
+                self.set_input_end_index(self.last_boundary_index);
+                return None;
+            }
+            #[cfg(not(feature = "segment"))]
+            {
+                self.set_input_end_index(index);
+                return None;
             }
         }
         self.width = new_width;
