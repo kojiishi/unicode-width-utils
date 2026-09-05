@@ -16,9 +16,11 @@ such as line wrapping and truncation.
 
 ## Features
 
-- **Width Calculation**: Measure the display column width of characters
-  and strings, with various configurations
-  stored in a lightweight configuration object that is easy to pass around.
+- **Width Calculation**: Measure the display column width of
+  characters and strings,
+  with various configurations
+  stored in a lightweight configuration object
+  that is fast and easy to pass around.
   - The **tab size** and whether to expand them to spaces or not.
   - The **size of control characters**.
   - Treat **ANSI escape sequences** zero-width
