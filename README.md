@@ -16,7 +16,8 @@ such as line wrapping and truncation.
 
 ## Features
 
-- **Configurations**: Provides various configurations,
+- **Width Calculation**: Measure the display column width of characters
+  and strings, with various configurations
   stored in a lightweight configuration object that is easy to pass around.
   - The **tab size** and whether to expand them to spaces or not.
   - The **size of control characters**.
@@ -26,10 +27,10 @@ such as line wrapping and truncation.
 - **Safe Truncation**: Truncate strings to a specific column width
   without breaking UTF-8 characters,
   including optional tab support.
+  - **Unicode Segmentation**: Truncate and wrap strings
+    only at Unicode grapheme cluster boundaries
+    (requires the optional `segment` feature).
 - **Line Wrapping**: Wrap strings to multiple lines at a specific column.
-- **Unicode Segmentation**: Truncate and wrap strings
-  only at Unicode grapheme cluster boundaries
-  (requires the optional `segment` feature).
 
 ## Installation
 ```bash
