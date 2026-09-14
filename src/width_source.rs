@@ -33,6 +33,8 @@ pub(crate) struct WidthSource<'a> {
     grapheme_iterator: unicode_segmentation::GraphemeIndices<'a>,
     #[cfg(feature = "segment")]
     next_grapheme_boundary: Option<usize>,
+    #[cfg(all(feature = "segment", debug_assertions))]
+    last_is_boundary_index: usize,
 }
 
 impl<'a> WidthSource<'a> {
@@ -54,6 +56,8 @@ impl<'a> WidthSource<'a> {
             grapheme_iterator,
             #[cfg(feature = "segment")]
             next_grapheme_boundary,
+            #[cfg(all(feature = "segment", debug_assertions))]
+            last_is_boundary_index: 0,
         }
     }
 
@@ -76,6 +80,11 @@ impl<'a> WidthSource<'a> {
     #[cfg(feature = "segment")]
     #[inline]
     fn is_boundary(&mut self, index: usize) -> bool {
+        #[cfg(debug_assertions)]
+        {
+            assert!(index >= self.last_is_boundary_index);
+            self.last_is_boundary_index = index;
+        }
         while let Some(boundary) = self.next_grapheme_boundary
             && boundary < index
         {
