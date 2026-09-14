@@ -73,6 +73,17 @@ impl<'a> WidthSource<'a> {
         &self.input_str[start..end]
     }
 
+    #[cfg(feature = "segment")]
+    #[inline]
+    fn is_boundary(&mut self, index: usize) -> bool {
+        while let Some(boundary) = self.next_grapheme_boundary
+            && boundary < index
+        {
+            self.next_grapheme_boundary = self.grapheme_iterator.next().map(|(i, _)| i);
+        }
+        self.next_grapheme_boundary == Some(index)
+    }
+
     #[cfg(feature = "ansi")]
     #[inline]
     fn next_char_skipping_ansi(&mut self) -> Option<(usize, char)> {
@@ -100,18 +111,9 @@ impl<'a> Iterator for WidthSource<'a> {
         let (index, ch) = self.input_chars.next()?;
 
         #[cfg(feature = "segment")]
-        let is_boundary = {
-            while let Some(boundary) = self.next_grapheme_boundary
-                && boundary < index
-            {
-                self.next_grapheme_boundary = self.grapheme_iterator.next().map(|(i, _)| i);
-            }
-            self.next_grapheme_boundary == Some(index)
-        };
+        return Some((index, ch, self.is_boundary(index)));
         #[cfg(not(feature = "segment"))]
-        let is_boundary = true;
-
-        Some((index, ch, is_boundary))
+        Some((index, ch, true))
     }
 }
 
