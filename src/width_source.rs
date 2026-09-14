@@ -72,17 +72,11 @@ impl<'a> WidthSource<'a> {
     pub(crate) fn slice(&self, start: usize, end: usize) -> &'a str {
         &self.input_str[start..end]
     }
-}
 
-impl<'a> Iterator for WidthSource<'a> {
-    type Item = (usize, char, bool);
-
-    fn next(&mut self) -> Option<Self::Item> {
-        #[cfg(feature = "ansi")]
+    #[cfg(feature = "ansi")]
+    #[inline]
+    fn next_char_skipping_ansi(&mut self) -> Option<(usize, char)> {
         let (mut index, mut ch) = self.input_chars.next()?;
-        #[cfg(not(feature = "ansi"))]
-        let (index, ch) = self.input_chars.next()?;
-        #[cfg(feature = "ansi")]
         while ch == 0x1B as char
             && self.is_ansi
             && let Some(m) = RE_ANSI.find(&self.input_str[index + 1..])
@@ -92,6 +86,18 @@ impl<'a> Iterator for WidthSource<'a> {
             }
             (index, ch) = self.input_chars.next()?;
         }
+        Some((index, ch))
+    }
+}
+
+impl<'a> Iterator for WidthSource<'a> {
+    type Item = (usize, char, bool);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        #[cfg(feature = "ansi")]
+        let (index, ch) = self.next_char_skipping_ansi()?;
+        #[cfg(not(feature = "ansi"))]
+        let (index, ch) = self.input_chars.next()?;
 
         #[cfg(feature = "segment")]
         let is_boundary = {
